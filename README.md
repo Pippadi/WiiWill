@@ -1,6 +1,6 @@
 # WiiWill [Work in progress]
 
-A simple Wii remote gamepad mapper.
+A simple Wii remote gamepad mapper for Linux.
 
 I'm writing this because other similar programs seem to be ancient, unmaintained, and difficult to use.
 My hope with this is to be able to distribute a single package or binary that works out-of-the-box, with no separate driver or library installation necessary.
@@ -13,8 +13,9 @@ My hope with this is to be able to distribute a single package or binary that wo
 > That said, suggestions and contributions are welcome.
 
 1. Scans for bluetooth devices which have `RVL-CNT-01` in their advertised name, and connects to the first one
-2. Monitors `udev` for `uevent`s in which files under `/dev/input` are created
+2. Monitors `udev` for `uevent`s in which files under `/dev/input` (specified by `DEVNAME`) are created
 3. Finds `DEVNAME` for `uevent` containing `MAJOR="13"` and `MINOR="79"`
+4. Reads events from this file
 
 Of the several `/dev/input/eventX` files created, only one registers all the buttons (including the D-pad). The `uevent` which reports this file also reports that it is created by the `input` driver (`MAJOR="13"`), and has a `MINOR="79"`.
 I am not sure what the significance of the number 79 is, but I feel it is related to [this](https://github.com/torvalds/linux/blob/master/include/uapi/linux/input-event-codes.h#L31).
