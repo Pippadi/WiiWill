@@ -20,7 +20,7 @@ type UI struct {
 	wwApp      fyne.App
 	mainWindow fyne.Window
 
-	candidates []string
+	dev *bluetooth.Device
 }
 
 var _ wiimote.Manager = new(UI)
@@ -32,6 +32,9 @@ func New() *UI {
 func (u *UI) Initialize() (err error) {
 	u.wwApp = app.NewWithID("com.github.Pippadi.WiiWill")
 	u.wwApp.Lifecycle().SetOnStopped(func() {
+		if u.dev != nil {
+			u.dev.Disconnect()
+		}
 		actor.SendStopMsg(u.Inbox())
 	})
 	u.mainWindow = u.wwApp.NewWindow("WiiWill")
@@ -54,10 +57,10 @@ func (u *UI) AddCandidateWiimote(btAddr bluetooth.Addresser) {
 	wiimote.SendConnect(u.finderInbox, btAddr)
 }
 
-func (u *UI) SetEventPath(path string) {
-	loggo.Info("Wiimote button events at", path)
+func (u *UI) SetDevice(dev *bluetooth.Device, eventPath string) {
+	loggo.Info("Wiimote button events at", eventPath)
 	actor.SendStopMsg(u.finderInbox)
-	u.SpawnNested(wiimote.NewEventReader(path), "EventReader")
+	u.SpawnNested(wiimote.NewEventReader(eventPath), "EventReader")
 }
 
 func (u *UI) HandleKeyEvent(key wiimote.Key, state wiimote.KeyState) {

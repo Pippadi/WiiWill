@@ -44,7 +44,7 @@ func (f *Finder) Finalize() {
 func (f *Finder) connectToWiimote(btAddr bluetooth.Addresser) error {
 	loggo.Infof("Connecting to %s", btAddr.String())
 
-	_, err := adapter.Connect(btAddr, bluetooth.ConnectionParams{})
+	dev, err := adapter.Connect(btAddr, bluetooth.ConnectionParams{})
 	if err != nil {
 		sendConnectError(f.CreatorInbox(), err)
 	}
@@ -54,7 +54,7 @@ func (f *Finder) connectToWiimote(btAddr bluetooth.Addresser) error {
 		sendConnectError(f.CreatorInbox(), err)
 	}
 
-	sendEventPath(f.CreatorInbox(), path)
+	sendDevice(f.CreatorInbox(), dev, path)
 	return nil
 }
 
