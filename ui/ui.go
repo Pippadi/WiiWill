@@ -1,9 +1,16 @@
 package ui
 
 import (
+	"errors"
+	"strconv"
+	"strings"
+
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
+	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/layout"
+	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/Pippadi/WiiWill/wiimote"
 	"github.com/Pippadi/loggo"
@@ -19,6 +26,10 @@ type UI struct {
 
 	wwApp      fyne.App
 	mainWindow fyne.Window
+
+	candidates        map[string]bluetooth.Addresser
+	candidateSelector *widget.SelectEntry
+	connectBtn        *widget.Button
 
 	dev *bluetooth.Device
 }
@@ -37,8 +48,25 @@ func (u *UI) Initialize() (err error) {
 		}
 		actor.SendStopMsg(u.Inbox())
 	})
+
+	u.candidates = make(map[string]bluetooth.Addresser)
+	u.candidateSelector = widget.NewSelectEntry([]string{})
+	u.candidateSelector.PlaceHolder = "Wiimote Bluetooth Address"
+	u.candidateSelector.Validator = fyne.StringValidator(validBtAddr)
+	u.connectBtn = widget.NewButtonWithIcon(
+		"Connect",
+		theme.ContentAddIcon(),
+		u.connectToSelected,
+	)
+	connectAcc := widget.NewAccordionItem("Connect", container.NewVBox(
+		u.candidateSelector,
+		container.NewHBox(layout.NewSpacer(), u.connectBtn, layout.NewSpacer()),
+	))
+
+	mainAcc := widget.NewAccordion(connectAcc)
+
 	u.mainWindow = u.wwApp.NewWindow("WiiWill")
-	u.mainWindow.SetContent(widget.NewLabel("Wiimote"))
+	u.mainWindow.SetContent(mainAcc)
 	u.mainWindow.Resize(fyne.NewSize(400, 400))
 	u.mainWindow.SetMaster()
 
@@ -53,8 +81,22 @@ func (u *UI) Initialize() (err error) {
 }
 
 func (u *UI) AddCandidateWiimote(btAddr bluetooth.Addresser) {
-	loggo.Info("Connecting to", btAddr.String())
-	wiimote.SendConnect(u.finderInbox, btAddr)
+	u.candidates[btAddr.String()] = btAddr
+	addrs := make([]string, 0)
+	for a, _ := range u.candidates {
+		addrs = append(addrs, a)
+	}
+	u.candidateSelector.SetOptions(addrs)
+	u.candidateSelector.SetText(btAddr.String())
+}
+
+func (u *UI) connectToSelected() {
+	if err := u.candidateSelector.Validate(); err != nil {
+		dialog.ShowError(err, u.mainWindow)
+		return
+	}
+	loggo.Info("Connecting to")
+	wiimote.SendConnect(u.finderInbox, u.candidates[u.candidateSelector.Text])
 }
 
 func (u *UI) SetDevice(dev *bluetooth.Device, eventPath string) {
@@ -69,4 +111,22 @@ func (u *UI) HandleKeyEvent(key wiimote.Key, state wiimote.KeyState) {
 
 func (u *UI) HandleConnectError(err error) {
 	dialog.ShowError(err, u.mainWindow)
+}
+
+func validBtAddr(addr string) (err error) {
+	err = errors.New("Invalid bluetooth address")
+
+	chunks := strings.Split(addr, ":")
+	if len(chunks) != 6 {
+		return
+	}
+	for _, chunk := range chunks {
+		_, e := strconv.ParseUint(chunk, 16, 8)
+		if e != nil {
+			return
+		}
+	}
+
+	err = nil
+	return
 }
