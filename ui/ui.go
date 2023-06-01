@@ -12,6 +12,7 @@ import (
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
+	"github.com/Pippadi/WiiWill/ui/mapeditor"
 	"github.com/Pippadi/WiiWill/wiimote"
 	"github.com/Pippadi/loggo"
 	actor "gitlab.com/prithvivishak/goactor"
@@ -48,6 +49,7 @@ func (u *UI) Initialize() (err error) {
 		}
 		actor.SendStopMsg(u.Inbox())
 	})
+	u.mainWindow = u.wwApp.NewWindow("WiiWill")
 
 	u.candidates = make(map[string]bluetooth.Addresser)
 	u.candidateSelector = widget.NewSelectEntry([]string{})
@@ -63,9 +65,11 @@ func (u *UI) Initialize() (err error) {
 		container.NewHBox(layout.NewSpacer(), u.connectBtn, layout.NewSpacer()),
 	))
 
-	mainAcc := widget.NewAccordion(connectAcc)
+	mapAcc := widget.NewAccordionItem("Map", mapeditor.New(u.mainWindow).UI())
 
-	u.mainWindow = u.wwApp.NewWindow("WiiWill")
+	mainAcc := widget.NewAccordion(connectAcc, mapAcc)
+	mainAcc.OpenAll()
+
 	u.mainWindow.SetContent(mainAcc)
 	u.mainWindow.Resize(fyne.NewSize(400, 400))
 	u.mainWindow.SetMaster()

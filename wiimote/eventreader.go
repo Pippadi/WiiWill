@@ -10,6 +10,7 @@ type Key byte
 type KeyState byte
 
 const (
+	// Wiimote held vertically
 	BtnA     Key = 0x30
 	BtnB         = 0x31
 	Btn1         = 0x01
