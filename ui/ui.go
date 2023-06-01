@@ -68,10 +68,10 @@ func (u *UI) Initialize() (err error) {
 	mapAcc := widget.NewAccordionItem("Map", mapeditor.New(u.mainWindow).UI())
 
 	mainAcc := widget.NewAccordion(connectAcc, mapAcc)
-	mainAcc.OpenAll()
+	mainAcc.Open(0)
 
 	u.mainWindow.SetContent(mainAcc)
-	u.mainWindow.Resize(fyne.NewSize(400, 400))
+	u.mainWindow.Resize(fyne.NewSize(800, 600))
 	u.mainWindow.SetMaster()
 
 	u.CreatorInbox() <- func(a actor.Actor) error {
