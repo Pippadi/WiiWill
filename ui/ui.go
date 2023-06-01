@@ -1,20 +1,18 @@
 package ui
 
 import (
-	"errors"
-	"strconv"
-	"strings"
-
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/driver/desktop"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/Pippadi/WiiWill/ui/mapeditor"
 	"github.com/Pippadi/WiiWill/wiimote"
 	"github.com/Pippadi/loggo"
+	"github.com/bendahl/uinput"
 	actor "gitlab.com/prithvivishak/goactor"
 	"tinygo.org/x/bluetooth"
 )
@@ -31,8 +29,10 @@ type UI struct {
 	candidates        map[string]bluetooth.Addresser
 	candidateSelector *widget.SelectEntry
 	connectBtn        *widget.Button
+	mapEditor         *mapeditor.MapEditor
 
-	dev *bluetooth.Device
+	dev      *bluetooth.Device
+	keyboard uinput.Keyboard
 }
 
 var _ wiimote.Manager = new(UI)
@@ -65,7 +65,8 @@ func (u *UI) Initialize() (err error) {
 		container.NewHBox(layout.NewSpacer(), u.connectBtn, layout.NewSpacer()),
 	))
 
-	mapAcc := widget.NewAccordionItem("Map", mapeditor.New(u.mainWindow).UI())
+	u.mapEditor = mapeditor.New(u.mainWindow)
+	mapAcc := widget.NewAccordionItem("Map", u.mapEditor.UI())
 
 	mainAcc := widget.NewAccordion(connectAcc, mapAcc)
 	mainAcc.Open(0)
@@ -80,6 +81,11 @@ func (u *UI) Initialize() (err error) {
 	}
 
 	u.finderInbox, err = u.SpawnNested(wiimote.NewFinder(), "Finder")
+	if err != nil {
+		return
+	}
+
+	u.keyboard, err = uinput.CreateKeyboard("/dev/uinput", []byte("WiiWill"))
 
 	return err
 }
@@ -99,18 +105,39 @@ func (u *UI) connectToSelected() {
 		dialog.ShowError(err, u.mainWindow)
 		return
 	}
-	loggo.Info("Connecting to")
+	loggo.Info("Connecting to", u.candidateSelector.Text)
+	addr, ok := u.candidates[u.candidateSelector.Text]
+	if !ok {
+		mac, _ := bluetooth.ParseMAC(u.candidateSelector.Text)
+		addr = bluetooth.MACAddress{MAC: mac}
+		addr.SetRandom(true)
+	}
 	wiimote.SendConnect(u.finderInbox, u.candidates[u.candidateSelector.Text])
 }
 
 func (u *UI) SetDevice(dev *bluetooth.Device, eventPath string) {
 	loggo.Info("Wiimote button events at", eventPath)
 	actor.SendStopMsg(u.finderInbox)
-	u.SpawnNested(wiimote.NewEventReader(eventPath), "EventReader")
+	_, err := u.SpawnNested(wiimote.NewEventReader(eventPath), "EventReader")
+	if err != nil {
+		dialog.ShowError(err, u.mainWindow)
+	}
 }
 
 func (u *UI) HandleKeyEvent(key wiimote.Keycode, state wiimote.KeyState) {
 	loggo.Infof("0x%02x %d", key, state)
+	name := u.mapEditor.KeyFor(key)
+	uiKey, ok := fyneToUinputKey[name]
+
+	if name == desktop.KeyNone || !ok {
+		return
+	}
+
+	if state == wiimote.Pressed {
+		u.keyboard.KeyDown(uiKey)
+	} else {
+		u.keyboard.KeyUp(uiKey)
+	}
 }
 
 func (u *UI) HandleConnectError(err error) {
@@ -118,19 +145,6 @@ func (u *UI) HandleConnectError(err error) {
 }
 
 func validBtAddr(addr string) (err error) {
-	err = errors.New("Invalid bluetooth address")
-
-	chunks := strings.Split(addr, ":")
-	if len(chunks) != 6 {
-		return
-	}
-	for _, chunk := range chunks {
-		_, e := strconv.ParseUint(chunk, 16, 8)
-		if e != nil {
-			return
-		}
-	}
-
-	err = nil
+	_, err = bluetooth.ParseMAC(addr)
 	return
 }

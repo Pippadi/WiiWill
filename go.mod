@@ -3,9 +3,9 @@ module github.com/Pippadi/WiiWill
 go 1.20
 
 require (
-	fyne.io/fyne v1.4.3
 	fyne.io/fyne/v2 v2.3.4
 	github.com/Pippadi/loggo v0.1.4
+	github.com/bendahl/uinput v1.6.2
 	github.com/pilebones/go-udev v0.9.0
 	gitlab.com/prithvivishak/goactor v0.1.5
 	tinygo.org/x/bluetooth v0.6.0
@@ -20,7 +20,6 @@ require (
 	github.com/fyne-io/gl-js v0.0.0-20220119005834-d2da28d9ccfe // indirect
 	github.com/fyne-io/glfw-js v0.0.0-20220120001248-ee7290d23504 // indirect
 	github.com/fyne-io/image v0.0.0-20220602074514-4956b0afb3d2 // indirect
-	github.com/fyne-io/mobile v0.1.2 // indirect
 	github.com/go-gl/gl v0.0.0-20211210172815-726fda9656d6 // indirect
 	github.com/go-gl/glfw/v3.3/glfw v0.0.0-20221017161538-93cebf72946b // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect

@@ -37,7 +37,7 @@ func New(w fyne.Window) *MapEditor {
 	f := widget.NewForm()
 	for c, _ := range wiimote.KeyMap {
 		m.buttons[c] = widget.NewButton("None", nil)
-		m.buttons[c].OnTapped = m.RemapButtonHandler(m.buttons[c], c)
+		m.buttons[c].OnTapped = m.remapButtonHandler(m.buttons[c], c)
 		m.mapping[c] = desktop.KeyNone
 	}
 	// Map stores elements in arbitrary order, so order buttons manually
@@ -65,7 +65,7 @@ func (m *MapEditor) UI() fyne.CanvasObject {
 	return m.mainContainer
 }
 
-func (m *MapEditor) RemapButtonHandler(b *widget.Button, c wiimote.Keycode) func() {
+func (m *MapEditor) remapButtonHandler(b *widget.Button, c wiimote.Keycode) func() {
 	return func() {
 		b.SetText("Waiting for keypress...")
 		m.parentWindow.Canvas().SetOnTypedKey(
@@ -142,4 +142,12 @@ func (m *MapEditor) updateButtonsFromMap() {
 			m.buttons[wiicode].SetText(string(keyname))
 		}
 	}
+}
+
+func (m *MapEditor) KeyFor(code wiimote.Keycode) fyne.KeyName {
+	name, ok := m.mapping[code]
+	if !ok {
+		return desktop.KeyNone
+	}
+	return name
 }
