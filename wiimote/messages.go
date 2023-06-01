@@ -14,7 +14,7 @@ func SendConnect(dest actor.Inbox, btAddr bluetooth.Addresser) {
 type Manager interface {
 	AddCandidateWiimote(btAddr bluetooth.Addresser)
 	SetDevice(dev *bluetooth.Device, eventPath string)
-	HandleKeyEvent(Key, KeyState)
+	HandleKeyEvent(Keycode, KeyState)
 
 	HandleConnectError(err error)
 }
@@ -40,7 +40,7 @@ func sendConnectError(dest actor.Inbox, err error) {
 	}
 }
 
-func sendKeyEvent(dest actor.Inbox, btn Key, state KeyState) {
+func sendKeyEvent(dest actor.Inbox, btn Keycode, state KeyState) {
 	dest <- func(a actor.Actor) error {
 		a.(Manager).HandleKeyEvent(btn, state)
 		return nil

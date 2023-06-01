@@ -109,7 +109,7 @@ func (u *UI) SetDevice(dev *bluetooth.Device, eventPath string) {
 	u.SpawnNested(wiimote.NewEventReader(eventPath), "EventReader")
 }
 
-func (u *UI) HandleKeyEvent(key wiimote.Key, state wiimote.KeyState) {
+func (u *UI) HandleKeyEvent(key wiimote.Keycode, state wiimote.KeyState) {
 	loggo.Infof("0x%02x %d", key, state)
 }
 
