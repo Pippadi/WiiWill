@@ -8,6 +8,7 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/driver/desktop"
+	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/Pippadi/WiiWill/wiimote"
@@ -54,8 +55,9 @@ func New(w fyne.Window) *MapEditor {
 	f.AppendItem(widget.NewFormItem(wiimote.KeyMap[wiimote.BtnHome].PrettyName, m.buttons[wiimote.BtnHome]))
 
 	m.mainContainer = container.NewVBox(
+		widget.NewLabel("Wiimote held vertically"),
 		f,
-		container.NewHBox(m.loadBtn, m.saveBtn),
+		container.NewHBox(m.loadBtn, layout.NewSpacer(), m.saveBtn),
 	)
 
 	return m

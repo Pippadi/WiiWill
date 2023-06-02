@@ -14,13 +14,14 @@ My hope with this is to be able to distribute a single package or binary that wo
 
 1. Scans for bluetooth devices which have `RVL-CNT-01` in their advertised name, and connects to the first one
 2. Monitors `udev` for `uevent`s in which files under `/dev/input` (specified by `DEVNAME`) are created
-3. Finds `DEVNAME` for `uevent` containing `MAJOR="13"` and `MINOR="79"`
+3. Finds `DEVNAME` for `uevent` satisfying `MAJOR="13"`, `MINOR!="0", and `ID_INPUT_KEY=1`
 4. Reads events from this file
+5. Writes mapped key event to `/dev/uinput`
 
-Of the several `/dev/input/eventX` files created, only one registers all the buttons (including the D-pad). The `uevent` which reports this file also reports that it is created by the `input` driver (`MAJOR="13"`), and has a `MINOR="79"`.
-I am not sure what the significance of the number 79 is, but I feel it is related to [this](https://github.com/torvalds/linux/blob/master/include/uapi/linux/input-event-codes.h#L31).
-
-This is all that has been implemented so far. `uinput` will be used to generate mouse/keypresses after the buttons have been remapped.
+Of the several `/dev/input/eventX` files created, only one registers all the buttons (including the D-pad).
+The `uevent` which reports this file also reports that it is created by the `input` driver (`MAJOR="13"`), has a `MINOR` not equal to `"0"`, and has `ID_INPUT_KEY` set to `"1"`.
+I am not sure what exactly these mean. These are just patterns I've observed.
+Time for some `grep`ping in the Linux source code.
 
 ## Acknowledgements
 

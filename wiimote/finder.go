@@ -79,8 +79,11 @@ func getDevicePathFromUdev() (string, error) {
 				strings.Contains(event.KObj, "bluetooth") {
 				maj, majOk := event.Env["MAJOR"]
 				min, minOk := event.Env["MINOR"]
+				keyIn, keyInOk := event.Env["ID_INPUT_KEY"]
 				dev, devOk := event.Env["DEVNAME"]
-				if majOk && minOk && devOk && maj == "13" && min == "79" {
+				// min="0" gives us /dev/input/jsX, which doesn't register D-pad events
+				if majOk && minOk && keyInOk && devOk &&
+					maj == "13" && min != "0" && keyIn == "1" {
 					return dev, nil
 				}
 			}
