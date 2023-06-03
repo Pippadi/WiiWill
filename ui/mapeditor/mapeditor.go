@@ -55,9 +55,13 @@ func New(w fyne.Window) *MapEditor {
 	f.AppendItem(widget.NewFormItem(wiimote.KeyMap[wiimote.BtnHome].PrettyName, m.buttons[wiimote.BtnHome]))
 
 	m.mainContainer = container.NewVBox(
-		widget.NewLabel("Wiimote held vertically"),
 		f,
-		container.NewHBox(m.loadBtn, layout.NewSpacer(), m.saveBtn),
+		container.NewHBox(
+			widget.NewLabel("Wiimote held vertically"),
+			layout.NewSpacer(),
+			m.loadBtn,
+			m.saveBtn,
+		),
 	)
 
 	return m

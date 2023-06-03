@@ -3,6 +3,7 @@ package wiimote
 import (
 	"os"
 
+	"github.com/Pippadi/loggo"
 	actor "gitlab.com/prithvivishak/goactor"
 )
 
@@ -69,6 +70,9 @@ func (e *EventReader) Initialize() error {
 		for {
 			n, err := file.Read(buf)
 			if err != nil {
+				loggo.Error(err)
+				loggo.Info("Wiimote disconnected")
+				actor.SendStopMsg(e.Inbox())
 				return
 			}
 			if n > 0 {
