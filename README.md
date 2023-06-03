@@ -2,7 +2,18 @@
 
 A simple Wii remote gamepad mapper for Linux.
 
-I'm writing this because other similar programs seem to be ancient, unmaintained, and difficult to use.
+![Main UI](assets/mainui.png)
+
+## Usage
+
+1. Build with `go build` [TODO: publish prebuilt binary]
+2. Instantiate `uinput` kernel module with `sudo modprobe uinput`
+3. Start program
+4. Connect Wii remote from system's bluetooth settings
+
+## Motivations
+
+Other similar programs seem to be ancient, unmaintained, and difficult to use.
 My hope with this is to be able to distribute a single package or binary that works out-of-the-box, with no separate driver or library installation necessary.
 
 ## How it works

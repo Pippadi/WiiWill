@@ -57,7 +57,7 @@ func New(w fyne.Window) *MapEditor {
 	m.mainContainer = container.NewVBox(
 		f,
 		container.NewHBox(
-			widget.NewLabel("Wiimote held vertically"),
+			widget.NewLabel("Directions as seen when Wiimote held vertically"),
 			layout.NewSpacer(),
 			m.loadBtn,
 			m.saveBtn,
