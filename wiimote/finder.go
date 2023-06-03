@@ -3,13 +3,9 @@ package wiimote
 import (
 	"strings"
 
-	"github.com/Pippadi/loggo"
 	"github.com/pilebones/go-udev/netlink"
 	actor "gitlab.com/prithvivishak/goactor"
-	"tinygo.org/x/bluetooth"
 )
-
-var adapter = bluetooth.DefaultAdapter
 
 const wiimoteName = "RVL-CNT-01"
 
@@ -21,40 +17,16 @@ func NewFinder() *Finder {
 	return new(Finder)
 }
 
-func (f *Finder) Initialize() (err error) {
-	err = adapter.Enable()
-	if err != nil {
-		return
-	}
-
-	// Must be launched in goroutine. UI won't start otherwise. Have no clue why.
-	go adapter.Scan(func(adapter *bluetooth.Adapter, dev bluetooth.ScanResult) {
-		if strings.Contains(dev.LocalName(), wiimoteName) {
-			sendCandidateWiimote(f.CreatorInbox(), dev.Address)
+func (f *Finder) Initialize() error {
+	go func() {
+		for {
+			devname, err := getDevicePathFromUdev()
+			if err == nil {
+				sendEventPath(f.CreatorInbox(), devname)
+				return
+			}
 		}
-	})
-
-	return
-}
-
-func (f *Finder) Finalize() {
-	adapter.StopScan()
-}
-
-func (f *Finder) connectToWiimote(btAddr bluetooth.Addresser) error {
-	loggo.Infof("Connecting to %s", btAddr.String())
-
-	dev, err := adapter.Connect(btAddr, bluetooth.ConnectionParams{})
-	if err != nil {
-		sendConnectError(f.CreatorInbox(), err)
-	}
-
-	path, err := getDevicePathFromUdev()
-	if err != nil {
-		sendConnectError(f.CreatorInbox(), err)
-	}
-
-	sendDevice(f.CreatorInbox(), dev, path)
+	}()
 	return nil
 }
 

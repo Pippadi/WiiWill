@@ -12,11 +12,10 @@ My hope with this is to be able to distribute a single package or binary that wo
 > There may well be better ways to achieve what I'm doing here; I'm just going by what worked for me.
 > That said, suggestions and contributions are welcome.
 
-1. Scans for bluetooth devices which have `RVL-CNT-01` in their advertised name, and connects to the first one
-2. Monitors `udev` for `uevent`s in which files under `/dev/input` (specified by `DEVNAME`) are created
-3. Finds `DEVNAME` for `uevent` satisfying `MAJOR="13"`, `MINOR!="0", and `ID_INPUT_KEY=1`
-4. Reads events from this file
-5. Writes mapped key event to `/dev/uinput`
+1. Monitors `udev` for `uevent`s in which files under `/dev/input` (specified by `DEVNAME`) are created
+2. Finds `DEVNAME` for `uevent` satisfying `MAJOR="13"`, `MINOR!="0", and `ID_INPUT_KEY=1`
+3. Reads events from this file
+4. Writes mapped key event to `/dev/uinput`
 
 Of the several `/dev/input/eventX` files created, only one registers all the buttons (including the D-pad).
 The `uevent` which reports this file also reports that it is created by the `input` driver (`MAJOR="13"`), has a `MINOR` not equal to `"0"`, and has `ID_INPUT_KEY` set to `"1"`.
