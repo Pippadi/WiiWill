@@ -49,13 +49,13 @@ func (u *UI) Initialize() (err error) {
 	u.mapEditor = mapeditor.New(u.mainWindow)
 
 	box := container.NewVBox(
-		u.activityBar,
-		container.NewCenter(u.statusLbl),
-		widget.NewSeparator(),
 		u.mapEditor.UI(),
+		widget.NewSeparator(),
+		container.NewCenter(u.statusLbl),
+		u.activityBar,
 	)
 	u.mainWindow.SetContent(box)
-	u.mainWindow.Resize(fyne.NewSize(800, 600))
+	u.mainWindow.Resize(fyne.NewSize(550, 500))
 	u.mainWindow.SetMaster()
 
 	u.CreatorInbox() <- func(a actor.Actor) error {
