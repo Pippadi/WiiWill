@@ -4,15 +4,19 @@ A simple Wii remote gamepad mapper for Linux.
 
 ![Main UI](assets/mainui.png)
 
-## Usage
+## Installation and usage
 
-1. Download the tarball from the releases section
+1. Download the tarball from the [Releases](https://github.com/Pippadi/WiiWill/releases) section
 2. Untar with `tar -xvf WiiWill.tar.xz`
-3. Install `make` if you haven't already, and run `sudo make install`
-4. Start program
+3. Install `make` and run `sudo make install`
+4. Launch program
 5. Connect Wii remote from system's bluetooth settings
 
-Steps 3 and 4 *must* be done in order for WiiWill to recognize the remote. Uninstall with `sudo make uninstall`.
+Steps 3 and 4 *must* be done in order for WiiWill to recognize the remote.
+Multiple instances of the app can be launched (generally done by middle-clicking the app icon in the taskbar/dash) to handle multiple Wiimotes.
+
+Disconnect Wiimote through system bluetooth settings.
+Uninstall with `sudo make uninstall`.
 
 ## Motivations
 
