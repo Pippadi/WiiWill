@@ -1,8 +1,6 @@
 package wiimote
 
-import (
-	actor "gitlab.com/prithvivishak/goactor"
-)
+import actor "gitlab.com/prithvivishak/goactor"
 
 type Manager interface {
 	SetEventPath(eventPath string)

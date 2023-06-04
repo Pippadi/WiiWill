@@ -11,6 +11,8 @@ A simple Wii remote gamepad mapper for Linux.
 3. Start program
 4. Connect Wii remote from system's bluetooth settings
 
+Steps 3 and 4 *must* be done in order for WiiWill to recognize the remote.
+
 ## Motivations
 
 Other similar programs seem to be ancient, unmaintained, and difficult to use.
@@ -24,14 +26,10 @@ My hope with this is to be able to distribute a single package or binary that wo
 > That said, suggestions and contributions are welcome.
 
 1. Monitors `udev` for `uevent`s in which files under `/dev/input` (specified by `DEVNAME`) are created
-2. Finds `DEVNAME` for `uevent` satisfying `MAJOR="13"`, `MINOR!="0", and `ID_INPUT_KEY=1`
-3. Reads events from this file
-4. Writes mapped key event to `/dev/uinput`
-
-Of the several `/dev/input/eventX` files created, only one registers all the buttons (including the D-pad).
-The `uevent` which reports this file also reports that it is created by the `input` driver (`MAJOR="13"`), has a `MINOR` not equal to `"0"`, and has `ID_INPUT_KEY` set to `"1"`.
-I am not sure what exactly these mean. These are just patterns I've observed.
-Time for some `grep`ping in the Linux source code.
+2. Finds `DEVPATH` for `uevent` where `NAME` is specified as `"Nintendo Wii Remote"`
+3. Combs through contents of `/sys/$DEVPATH` for a folder called `eventX`
+4. Reads events from `/dev/input/eventX`
+5. Generates mapped event through `uinput`
 
 ## Acknowledgements
 

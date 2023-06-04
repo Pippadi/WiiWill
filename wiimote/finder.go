@@ -1,13 +1,14 @@
 package wiimote
 
 import (
+	"errors"
+	"io/ioutil"
+	"path"
 	"strings"
 
 	"github.com/pilebones/go-udev/netlink"
 	actor "gitlab.com/prithvivishak/goactor"
 )
-
-const wiimoteName = "RVL-CNT-01"
 
 type Finder struct {
 	actor.Base
@@ -20,9 +21,10 @@ func NewFinder() *Finder {
 func (f *Finder) Initialize() error {
 	go func() {
 		for {
-			devname, err := getDevicePathFromUdev()
+			eventPath, err := getEventPathFromUdev()
 			if err == nil {
-				sendEventPath(f.CreatorInbox(), devname)
+				sendEventPath(f.CreatorInbox(), eventPath)
+				actor.SendStopMsg(f.Inbox())
 				return
 			}
 		}
@@ -30,7 +32,7 @@ func (f *Finder) Initialize() error {
 	return nil
 }
 
-func getDevicePathFromUdev() (string, error) {
+func getSysfsPathFromUdev() (string, error) {
 	conn := new(netlink.UEventConn)
 	err := conn.Connect(netlink.UdevEvent)
 	if err != nil {
@@ -49,17 +51,32 @@ func getDevicePathFromUdev() (string, error) {
 		case event := <-eventQ:
 			if event.Action == "add" &&
 				strings.Contains(event.KObj, "bluetooth") {
-				maj, majOk := event.Env["MAJOR"]
-				min, minOk := event.Env["MINOR"]
-				keyIn, keyInOk := event.Env["ID_INPUT_KEY"]
-				dev, devOk := event.Env["DEVNAME"]
-				// min="0" gives us /dev/input/jsX, which doesn't register D-pad events
-				if majOk && minOk && keyInOk && devOk &&
-					maj == "13" && min != "0" && keyIn == "1" {
-					return dev, nil
+				name, nameOk := event.Env["NAME"]
+				devpath, devpathOk := event.Env["DEVPATH"]
+				if nameOk && devpathOk && name == `"Nintendo Wii Remote"` {
+					return path.Join("/sys", devpath), nil
 				}
 			}
 		}
 	}
 	return "", nil
+}
+
+func getEventPathFromUdev() (string, error) {
+	sysfsPath, err := getSysfsPathFromUdev()
+	if err != nil {
+		return "", err
+	}
+
+	files, err := ioutil.ReadDir(sysfsPath)
+	if err != nil {
+		return "", err
+	}
+	for _, f := range files {
+		if strings.HasPrefix(f.Name(), "event") {
+			return path.Join("/dev/input", f.Name()), nil
+		}
+	}
+
+	return "", errors.New("Event file not found")
 }

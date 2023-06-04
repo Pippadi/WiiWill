@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"time"
+
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
@@ -74,8 +76,9 @@ func (u *UI) SetEventPath(eventPath string) {
 	u.statusLbl.SetText("Listening for events on " + eventPath)
 	u.activityBar.Stop()
 	u.activityBar.Hide()
-	actor.SendStopMsg(u.finderInbox)
 
+	// Wait for permissions to be applied on /dev/eventX
+	time.Sleep(250 * time.Millisecond)
 	var err error
 	u.listenerInbox, err = u.SpawnNested(wiimote.NewEventReader(eventPath), "EventReader")
 	if err != nil {
@@ -100,7 +103,7 @@ func (u *UI) HandleKeyEvent(key wiimote.Keycode, state wiimote.KeyState) {
 }
 
 func (u *UI) HandleLastMsg(a actor.Actor, err error) error {
-	if a.Inbox() == u.listenerInbox {
+	if a == nil || a.ID() == "EventReader" {
 		u.startFinder()
 	}
 	return nil
