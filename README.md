@@ -6,12 +6,13 @@ A simple Wii remote gamepad mapper for Linux.
 
 ## Usage
 
-1. Build with `go build` [TODO: publish prebuilt binary]
-2. Instantiate `uinput` kernel module with `sudo modprobe uinput`
-3. Start program
-4. Connect Wii remote from system's bluetooth settings
+1. Download the tarball from the releases section
+2. Untar with `tar -xvf WiiWill.tar.xz`
+3. Install `make` if you haven't already, and run `sudo make install`
+4. Start program
+5. Connect Wii remote from system's bluetooth settings
 
-Steps 3 and 4 *must* be done in order for WiiWill to recognize the remote.
+Steps 3 and 4 *must* be done in order for WiiWill to recognize the remote. Uninstall with `sudo make uninstall`.
 
 ## Motivations
 
