@@ -3,13 +3,13 @@ package wiimote
 import actor "gitlab.com/prithvivishak/goactor"
 
 type Manager interface {
-	SetEventPath(eventPath string)
+	AddDevice(dev Device, eventPath string)
 	HandleKeyEvent(Keycode, KeyState)
 }
 
-func sendEventPath(dest actor.Inbox, eventPath string) {
+func sendDevice(dest actor.Inbox, device Device, eventPath string) {
 	dest <- func(a actor.Actor) error {
-		a.(Manager).SetEventPath(eventPath)
+		a.(Manager).AddDevice(device, eventPath)
 		return nil
 	}
 }

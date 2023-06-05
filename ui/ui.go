@@ -71,18 +71,20 @@ func (u *UI) Initialize() (err error) {
 	return err
 }
 
-func (u *UI) SetEventPath(eventPath string) {
-	loggo.Info("Wiimote button events at", eventPath)
-	u.statusLbl.SetText("Listening for events on " + eventPath)
-	u.activityBar.Stop()
-	u.activityBar.Hide()
+func (u *UI) AddDevice(dev wiimote.Device, eventPath string) {
+	loggo.Infof("%s events at %s", dev, eventPath)
+	if dev == wiimote.Wiimote {
+		u.statusLbl.SetText("Listening for events on " + eventPath)
+		u.activityBar.Stop()
+		u.activityBar.Hide()
 
-	// Wait for permissions to be applied on /dev/eventX
-	time.Sleep(250 * time.Millisecond)
-	var err error
-	u.listenerInbox, err = u.SpawnNested(wiimote.NewEventReader(eventPath), "EventReader")
-	if err != nil {
-		dialog.ShowError(err, u.mainWindow)
+		// Wait for permissions to be applied on /dev/eventX
+		time.Sleep(250 * time.Millisecond)
+		var err error
+		u.listenerInbox, err = u.SpawnNested(wiimote.NewEventReader(eventPath), "EventReader")
+		if err != nil {
+			dialog.ShowError(err, u.mainWindow)
+		}
 	}
 }
 
