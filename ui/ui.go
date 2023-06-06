@@ -19,8 +19,9 @@ import (
 type UI struct {
 	actor.Base
 
-	finderInbox   actor.Inbox
-	listenerInbox actor.Inbox
+	finderIbx    actor.Inbox
+	moteEventIbx actor.Inbox
+	extEventIbx  actor.Inbox
 
 	wwApp      fyne.App
 	mainWindow fyne.Window
@@ -67,7 +68,7 @@ func (u *UI) Initialize() (err error) {
 	}
 
 	u.setWiimoteDisconnected()
-	u.finderInbox, _ = u.SpawnNested(wiimote.NewFinder(), "Finder")
+	u.finderIbx, _ = u.SpawnNested(wiimote.NewFinder(), "Finder")
 	u.keyboard, err = uinput.CreateKeyboard("/dev/uinput", []byte("WiiWill"))
 
 	return err
@@ -75,17 +76,34 @@ func (u *UI) Initialize() (err error) {
 
 func (u *UI) AddDevice(dev wiimote.Device, eventPath string) {
 	loggo.Infof("%s events at %s", dev, eventPath)
+
+	// Wait for permissions to be applied on /dev/eventX
+	time.Sleep(250 * time.Millisecond)
+	var err error
 	if dev == wiimote.Wiimote && !u.wiimoteConnected {
 		u.setWiimoteConnected()
 
-		// Wait for permissions to be applied on /dev/eventX
-		time.Sleep(250 * time.Millisecond)
-		var err error
-		u.listenerInbox, err = u.SpawnNested(wiimote.NewEventReader(eventPath), "EventReader")
+		u.moteEventIbx, err = u.SpawnNested(wiimote.NewEventReader(eventPath), "WiimoteEventReader")
 		if err != nil {
 			dialog.ShowError(err, u.mainWindow)
 		}
-		u.wiimoteConnected = true
+	} else if dev == wiimote.Nunchuk {
+		u.extEventIbx, err = u.SpawnNested(wiimote.NewEventReader(eventPath), "NunchukEventReader")
+		if err != nil {
+			dialog.ShowError(err, u.mainWindow)
+		}
+	}
+}
+
+func (u *UI) RemoveDevice(dev wiimote.Device) {
+	switch dev {
+	case wiimote.Wiimote:
+		actor.SendStopMsg(u.moteEventIbx)
+		u.setWiimoteDisconnected()
+		fallthrough
+	case wiimote.Nunchuk:
+		actor.SendStopMsg(u.extEventIbx)
+	default:
 	}
 }
 
@@ -103,13 +121,6 @@ func (u *UI) HandleKeyEvent(key wiimote.Keycode, state wiimote.KeyState) {
 	} else {
 		u.keyboard.KeyUp(uiKey)
 	}
-}
-
-func (u *UI) HandleLastMsg(a actor.Actor, err error) error {
-	if a == nil || a.ID() == "EventReader" {
-		u.setWiimoteDisconnected()
-	}
-	return nil
 }
 
 func (u *UI) setWiimoteConnected() {

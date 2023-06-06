@@ -6,19 +6,28 @@ import (
 	"path"
 	"strings"
 
+	"github.com/Pippadi/loggo"
 	"github.com/pilebones/go-udev/netlink"
 	actor "gitlab.com/prithvivishak/goactor"
 )
 
 type Device string
+type Action string
 
 const (
 	Wiimote Device = `"Nintendo Wii Remote"`
 	Nunchuk        = `"Nintendo Wii Remote Nunchuk"`
+
+	Add    Action = "add"
+	Change        = "add"
+	Remove        = "remove"
 )
 
 type Finder struct {
 	actor.Base
+	conn     *netlink.UEventConn
+	eventQ   chan netlink.UEvent
+	connQuit chan struct{}
 }
 
 func NewFinder() *Finder {
@@ -26,66 +35,67 @@ func NewFinder() *Finder {
 }
 
 func (f *Finder) Initialize() error {
+	f.conn = new(netlink.UEventConn)
+	if err := f.conn.Connect(netlink.UdevEvent); err != nil {
+		return err
+	}
+
+	f.eventQ = make(chan netlink.UEvent)
+	f.connQuit = f.conn.Monitor(f.eventQ, nil, nil)
+
 	go func() {
 		for {
-			eventPath, dev, err := getEventPathFromUdev()
-			if err == nil {
-				sendDevice(f.CreatorInbox(), dev, eventPath)
-				actor.SendStopMsg(f.Inbox())
-				return
+			event := <-f.eventQ
+
+			name, nameOk := event.Env["NAME"]
+			if !nameOk {
+				continue
+			}
+
+			loggo.Debugf("%+v", event)
+
+			var dev Device
+			switch Device(name) {
+			case Wiimote:
+				dev = Wiimote
+			case Nunchuk:
+				dev = Nunchuk
+			default:
+				continue
+			}
+
+			eventPath, err := eventPathFromSysfs(path.Join("/sys", event.KObj))
+			if err != nil {
+				loggo.Error(err)
+				continue
+			}
+			switch Action(event.Action) {
+			case Add:
+				addDevice(f.CreatorInbox(), dev, eventPath)
+			case Remove:
+				removeDevice(f.CreatorInbox(), dev)
+			default:
 			}
 		}
 	}()
 	return nil
 }
 
-func getSysfsPathFromUdev() (string, Device, error) {
-	conn := new(netlink.UEventConn)
-	err := conn.Connect(netlink.UdevEvent)
-	if err != nil {
-		return "", "", err
-	}
-
-	eventQ := make(chan netlink.UEvent)
-	quit := conn.Monitor(eventQ, nil, nil)
-	defer func() {
-		close(quit)
-		conn.Close()
-	}()
-
-	for {
-		select {
-		case event := <-eventQ:
-			name, nameOk := event.Env["NAME"]
-			if event.Action == "add" && nameOk {
-				switch Device(name) {
-				case Wiimote:
-					return path.Join("/sys", event.KObj), Wiimote, nil
-				case Nunchuk:
-					return path.Join("/sys", event.KObj), Nunchuk, nil
-				default:
-				}
-			}
-		}
-	}
-	return "", "", nil
+func (f *Finder) Finalize() {
+	close(f.connQuit)
+	f.conn.Close()
 }
 
-func getEventPathFromUdev() (string, Device, error) {
-	sysfsPath, dev, err := getSysfsPathFromUdev()
-	if err != nil {
-		return "", "", err
-	}
-
+func eventPathFromSysfs(sysfsPath string) (string, error) {
 	files, err := ioutil.ReadDir(sysfsPath)
 	if err != nil {
-		return "", "", err
+		return "", err
 	}
 	for _, f := range files {
 		if strings.HasPrefix(f.Name(), "event") {
-			return path.Join("/dev/input", f.Name()), dev, nil
+			return path.Join("/dev/input", f.Name()), nil
 		}
 	}
 
-	return "", "", errors.New("Event file not found")
+	return "", errors.New("Event file not found")
 }

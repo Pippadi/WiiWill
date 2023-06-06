@@ -1,52 +1,66 @@
 package wiimote
 
 import (
+	"encoding/binary"
 	"os"
+	"syscall"
 
 	"github.com/Pippadi/loggo"
 	actor "gitlab.com/prithvivishak/goactor"
 )
 
-type Keycode byte
-type KeyState byte
-type Key struct {
+type Keycode uint16
+type KeyState uint32
+type EventType uint16
+
+type KeyInfo struct {
 	Code       Keycode
 	PrettyName string
 }
 
 const (
 	// Wiimote held vertically
-	BtnA     Keycode = 0x30
-	BtnB             = 0x31
-	Btn1             = 0x01
-	Btn2             = 0x02
-	BtnUp            = 0x67
-	BtnRight         = 0x6a
-	BtnLeft          = 0x69
-	BtnDown          = 0x6c
-	BtnPlus          = 0x97
-	BtnMinus         = 0x9c
-	BtnHome          = 0x3c
+	BtnA     Keycode = 0x0304
+	BtnB             = 0x0305
+	Btn1             = 0x0257
+	Btn2             = 0x0258
+	BtnUp            = 0x0103
+	BtnRight         = 0x0106
+	BtnLeft          = 0x0105
+	BtnDown          = 0x0108
+	BtnPlus          = 0x0407
+	BtnMinus         = 0x0412
+	BtnHome          = 0x0316
 
 	Pressed  KeyState = 0x01
 	Released          = 0x00
 
-	btnCodeOffset int = 18
-	stateOffset       = 20
+	Sync     EventType = 0x00
+	Key      EventType = 0x01
+	Relative EventType = 0x02
+	Absolute EventType = 0x03
 )
 
-var KeyMap = map[Keycode]Key{
-	BtnA:     Key{BtnA, "A"},
-	BtnB:     Key{BtnB, "B"},
-	Btn1:     Key{Btn1, "1"},
-	Btn2:     Key{Btn2, "2"},
-	BtnUp:    Key{BtnUp, "D-pad Up"},
-	BtnDown:  Key{BtnDown, "D-pad Down"},
-	BtnLeft:  Key{BtnLeft, "D-pad Left"},
-	BtnRight: Key{BtnRight, "D-pad Right"},
-	BtnPlus:  Key{BtnPlus, "+"},
-	BtnMinus: Key{BtnMinus, "-"},
-	BtnHome:  Key{BtnHome, "Home"},
+var KeyMap = map[Keycode]KeyInfo{
+	BtnA:     KeyInfo{BtnA, "A"},
+	BtnB:     KeyInfo{BtnB, "B"},
+	Btn1:     KeyInfo{Btn1, "1"},
+	Btn2:     KeyInfo{Btn2, "2"},
+	BtnUp:    KeyInfo{BtnUp, "D-pad Up"},
+	BtnDown:  KeyInfo{BtnDown, "D-pad Down"},
+	BtnLeft:  KeyInfo{BtnLeft, "D-pad Left"},
+	BtnRight: KeyInfo{BtnRight, "D-pad Right"},
+	BtnPlus:  KeyInfo{BtnPlus, "+"},
+	BtnMinus: KeyInfo{BtnMinus, "-"},
+	BtnHome:  KeyInfo{BtnHome, "Home"},
+}
+
+// See https://www.kernel.org/doc/Documentation/input/input.txt
+type InputEvent struct {
+	Timestamp syscall.Timeval
+	Type      EventType
+	Code      uint16
+	Value     uint32
 }
 
 type EventReader struct {
@@ -66,20 +80,20 @@ func (e *EventReader) Initialize() error {
 
 	go func() {
 		defer file.Close()
-		buf := make([]byte, 64)
 		for {
-			n, err := file.Read(buf)
+			ev := new(InputEvent)
+			err = binary.Read(file, binary.LittleEndian, ev)
 			if err != nil {
 				loggo.Error(err)
 				loggo.Info("Wiimote disconnected")
-				actor.SendStopMsg(e.Inbox())
 				return
 			}
-			if n > 0 {
+			loggo.Debug("%+v", ev)
+			if ev.Type == Key {
 				sendKeyEvent(
 					e.CreatorInbox(),
-					Keycode(buf[btnCodeOffset]),
-					KeyState(buf[stateOffset]),
+					Keycode(ev.Code),
+					KeyState(ev.Value),
 				)
 			}
 		}
