@@ -12,7 +12,7 @@ A simple Wii remote gamepad mapper for Linux.
 4. Launch program
 5. Connect Wii remote from system's bluetooth settings
 
-Steps 3 and 4 *must* be done in order for WiiWill to recognize the remote.
+Steps 4 and 5 *must* be done in order for WiiWill to recognize the remote.
 Multiple instances of the app can be launched (generally done by middle-clicking the app icon in the taskbar/dash) to handle multiple Wiimotes.
 
 Disconnect Wiimote through system bluetooth settings.
