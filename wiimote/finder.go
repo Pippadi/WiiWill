@@ -15,8 +15,9 @@ type Device string
 type Action string
 
 const (
-	Wiimote Device = `"Nintendo Wii Remote"`
-	Nunchuk        = `"Nintendo Wii Remote Nunchuk"`
+	Wiimote  Device = `"Nintendo Wii Remote"`
+	Nunchuk         = `"Nintendo Wii Remote Nunchuk"`
+	NoDevice        = ""
 
 	Add    Action = "add"
 	Change        = "add"

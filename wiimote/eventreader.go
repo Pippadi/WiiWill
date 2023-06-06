@@ -32,6 +32,9 @@ const (
 	BtnMinus         = 0x0412
 	BtnHome          = 0x0316
 
+	BtnZ = 0x0135
+	BtnC = 0x0132
+
 	Pressed  KeyState = 0x01
 	Released          = 0x00
 
@@ -53,6 +56,9 @@ var KeyMap = map[Keycode]KeyInfo{
 	BtnPlus:  KeyInfo{BtnPlus, "+"},
 	BtnMinus: KeyInfo{BtnMinus, "-"},
 	BtnHome:  KeyInfo{BtnHome, "Home"},
+
+	BtnZ: KeyInfo{BtnZ, "Z"},
+	BtnC: KeyInfo{BtnC, "C"},
 }
 
 // See https://www.kernel.org/doc/Documentation/input/input.txt
@@ -88,8 +94,8 @@ func (e *EventReader) Initialize() error {
 				loggo.Info("Wiimote disconnected")
 				return
 			}
-			loggo.Debug("%+v", ev)
 			if ev.Type == Key {
+				loggo.Debug("%+v", ev)
 				sendKeyEvent(
 					e.CreatorInbox(),
 					Keycode(ev.Code),

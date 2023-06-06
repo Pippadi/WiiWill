@@ -35,13 +35,14 @@ func New(w fyne.Window) *MapEditor {
 	m.loadBtn = widget.NewButtonWithIcon("Load", theme.UploadIcon(), m.loadMap)
 	m.saveBtn = widget.NewButtonWithIcon("Save", theme.FileIcon(), m.saveMap)
 
-	f := widget.NewForm()
 	for c, _ := range wiimote.KeyMap {
 		m.buttons[c] = widget.NewButton("None", nil)
 		m.buttons[c].OnTapped = m.remapButtonHandler(m.buttons[c], c)
 		m.mapping[c] = desktop.KeyNone
 	}
+
 	// Map stores elements in arbitrary order, so order buttons manually
+	f := widget.NewForm()
 	f.AppendItem(widget.NewFormItem(wiimote.KeyMap[wiimote.BtnUp].PrettyName, m.buttons[wiimote.BtnUp]))
 	f.AppendItem(widget.NewFormItem(wiimote.KeyMap[wiimote.BtnDown].PrettyName, m.buttons[wiimote.BtnDown]))
 	f.AppendItem(widget.NewFormItem(wiimote.KeyMap[wiimote.BtnLeft].PrettyName, m.buttons[wiimote.BtnLeft]))
@@ -54,8 +55,16 @@ func New(w fyne.Window) *MapEditor {
 	f.AppendItem(widget.NewFormItem(wiimote.KeyMap[wiimote.BtnMinus].PrettyName, m.buttons[wiimote.BtnMinus]))
 	f.AppendItem(widget.NewFormItem(wiimote.KeyMap[wiimote.BtnHome].PrettyName, m.buttons[wiimote.BtnHome]))
 
+	nf := widget.NewForm()
+	nf.AppendItem(widget.NewFormItem(wiimote.KeyMap[wiimote.BtnZ].PrettyName, m.buttons[wiimote.BtnZ]))
+	nf.AppendItem(widget.NewFormItem(wiimote.KeyMap[wiimote.BtnC].PrettyName, m.buttons[wiimote.BtnC]))
+
+	tabs := container.NewAppTabs(
+		container.NewTabItem("Wiimote", f),
+		container.NewTabItem("Nunchuk", nf),
+	)
 	m.mainContainer = container.NewVBox(
-		f,
+		tabs,
 		container.NewHBox(
 			widget.NewLabel("Directions as seen when Wiimote held vertically"),
 			layout.NewSpacer(),

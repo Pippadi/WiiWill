@@ -33,12 +33,13 @@ type UI struct {
 
 	keyboard         uinput.Keyboard
 	wiimoteConnected bool
+	extension        wiimote.Device
 }
 
 var _ wiimote.Manager = new(UI)
 
 func New() *UI {
-	return &UI{wiimoteConnected: false}
+	return &UI{wiimoteConnected: false, extension: wiimote.NoDevice}
 }
 
 func (u *UI) Initialize() (err error) {
@@ -88,11 +89,14 @@ func (u *UI) AddDevice(dev wiimote.Device, eventPath string) {
 			dialog.ShowError(err, u.mainWindow)
 		}
 	} else if dev == wiimote.Nunchuk {
+		u.extension = wiimote.Nunchuk
 		u.extEventIbx, err = u.SpawnNested(wiimote.NewEventReader(eventPath), "NunchukEventReader")
 		if err != nil {
 			dialog.ShowError(err, u.mainWindow)
 		}
 	}
+
+	u.setStatusLbl()
 }
 
 func (u *UI) RemoveDevice(dev wiimote.Device) {
@@ -105,6 +109,8 @@ func (u *UI) RemoveDevice(dev wiimote.Device) {
 		actor.SendStopMsg(u.extEventIbx)
 	default:
 	}
+
+	u.setStatusLbl()
 }
 
 func (u *UI) HandleKeyEvent(key wiimote.Keycode, state wiimote.KeyState) {
@@ -125,14 +131,24 @@ func (u *UI) HandleKeyEvent(key wiimote.Keycode, state wiimote.KeyState) {
 
 func (u *UI) setWiimoteConnected() {
 	u.wiimoteConnected = true
-	u.statusLbl.SetText("Wiimote connected")
 	u.activityBar.Hide()
 	u.activityBar.Stop()
 }
 
 func (u *UI) setWiimoteDisconnected() {
 	u.wiimoteConnected = false
-	u.statusLbl.SetText("Waiting for Wiimote connection")
 	u.activityBar.Show()
 	u.activityBar.Start()
+}
+
+func (u *UI) setStatusLbl() {
+	if !u.wiimoteConnected {
+		u.statusLbl.SetText("Waiting for Wiimote connection")
+	} else {
+		if u.extension == wiimote.NoDevice {
+			u.statusLbl.SetText("Wiimote connected")
+		} else {
+			u.statusLbl.SetText("Wiimote, " + string(u.extension) + " connected")
+		}
+	}
 }
