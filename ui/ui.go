@@ -30,13 +30,14 @@ type UI struct {
 
 	mapEditor *mapeditor.MapEditor
 
-	keyboard uinput.Keyboard
+	keyboard         uinput.Keyboard
+	wiimoteConnected bool
 }
 
 var _ wiimote.Manager = new(UI)
 
 func New() *UI {
-	return new(UI)
+	return &UI{wiimoteConnected: false}
 }
 
 func (u *UI) Initialize() (err error) {
@@ -65,7 +66,8 @@ func (u *UI) Initialize() (err error) {
 		return nil
 	}
 
-	u.startFinder()
+	u.setWiimoteDisconnected()
+	u.finderInbox, _ = u.SpawnNested(wiimote.NewFinder(), "Finder")
 	u.keyboard, err = uinput.CreateKeyboard("/dev/uinput", []byte("WiiWill"))
 
 	return err
@@ -73,10 +75,8 @@ func (u *UI) Initialize() (err error) {
 
 func (u *UI) AddDevice(dev wiimote.Device, eventPath string) {
 	loggo.Infof("%s events at %s", dev, eventPath)
-	if dev == wiimote.Wiimote {
-		u.statusLbl.SetText("Listening for events on " + eventPath)
-		u.activityBar.Stop()
-		u.activityBar.Hide()
+	if dev == wiimote.Wiimote && !u.wiimoteConnected {
+		u.setWiimoteConnected()
 
 		// Wait for permissions to be applied on /dev/eventX
 		time.Sleep(250 * time.Millisecond)
@@ -85,6 +85,7 @@ func (u *UI) AddDevice(dev wiimote.Device, eventPath string) {
 		if err != nil {
 			dialog.ShowError(err, u.mainWindow)
 		}
+		u.wiimoteConnected = true
 	}
 }
 
@@ -106,13 +107,20 @@ func (u *UI) HandleKeyEvent(key wiimote.Keycode, state wiimote.KeyState) {
 
 func (u *UI) HandleLastMsg(a actor.Actor, err error) error {
 	if a == nil || a.ID() == "EventReader" {
-		u.startFinder()
+		u.setWiimoteDisconnected()
 	}
 	return nil
 }
 
-func (u *UI) startFinder() {
-	u.finderInbox, _ = u.SpawnNested(wiimote.NewFinder(), "Finder")
+func (u *UI) setWiimoteConnected() {
+	u.wiimoteConnected = true
+	u.statusLbl.SetText("Wiimote connected")
+	u.activityBar.Hide()
+	u.activityBar.Stop()
+}
+
+func (u *UI) setWiimoteDisconnected() {
+	u.wiimoteConnected = false
 	u.statusLbl.SetText("Waiting for Wiimote connection")
 	u.activityBar.Show()
 	u.activityBar.Start()
