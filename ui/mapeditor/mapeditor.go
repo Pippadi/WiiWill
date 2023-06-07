@@ -97,12 +97,15 @@ func (m *MapEditor) loadMap() {
 }
 
 func (m *MapEditor) loadMapFromFile(file fyne.URIReadCloser, err error) {
-	defer file.Close()
 	if err != nil {
 		loggo.Error(err)
 		dialog.ShowError(err, m.parentWindow)
 		return
 	}
+	if file == nil {
+		return
+	}
+	defer file.Close()
 
 	jsonBytes := make([]byte, 2048)
 	n, err := file.Read(jsonBytes)
@@ -128,12 +131,15 @@ func (m *MapEditor) saveMap() {
 }
 
 func (m *MapEditor) saveMapToFile(file fyne.URIWriteCloser, err error) {
-	defer file.Close()
 	if err != nil {
 		loggo.Error(err)
 		dialog.ShowError(errors.New("Unable to save file"), m.parentWindow)
 		return
 	}
+	if file == nil {
+		return
+	}
+	defer file.Close()
 
 	jsonBytes, err := json.MarshalIndent(m.mapping, "", "\t")
 	if err != nil {

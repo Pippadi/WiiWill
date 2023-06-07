@@ -20,7 +20,7 @@ const (
 	NoDevice        = ""
 
 	Add    Action = "add"
-	Change        = "add"
+	Change        = "change"
 	Remove        = "remove"
 )
 
@@ -53,8 +53,6 @@ func (f *Finder) Initialize() error {
 				continue
 			}
 
-			loggo.Debugf("%+v", event)
-
 			var dev Device
 			switch Device(name) {
 			case Wiimote:
@@ -65,16 +63,14 @@ func (f *Finder) Initialize() error {
 				continue
 			}
 
-			eventPath, err := eventPathFromSysfs(path.Join("/sys", event.KObj))
-			if err != nil {
-				loggo.Error(err)
-				continue
-			}
 			switch Action(event.Action) {
 			case Add:
+				eventPath, err := eventPathFromSysfs(path.Join("/sys", event.KObj))
+				if err != nil {
+					loggo.Error(err)
+					continue
+				}
 				addDevice(f.CreatorInbox(), dev, eventPath)
-			case Remove:
-				removeDevice(f.CreatorInbox(), dev)
 			default:
 			}
 		}

@@ -68,7 +68,7 @@ func (u *UI) Initialize() (err error) {
 		return nil
 	}
 
-	u.setWiimoteDisconnected()
+	u.setStatusLbl()
 	u.finderIbx, _ = u.SpawnNested(wiimote.NewFinder(), "Finder")
 	u.keyboard, err = uinput.CreateKeyboard("/dev/uinput", []byte("WiiWill"))
 
@@ -77,47 +77,34 @@ func (u *UI) Initialize() (err error) {
 
 func (u *UI) AddDevice(dev wiimote.Device, eventPath string) {
 	loggo.Infof("%s events at %s", dev, eventPath)
+	defer u.setStatusLbl()
 
 	// Wait for permissions to be applied on /dev/eventX
 	time.Sleep(250 * time.Millisecond)
 	var err error
 	if dev == wiimote.Wiimote && !u.wiimoteConnected {
-		u.setWiimoteConnected()
-
 		u.moteEventIbx, err = u.SpawnNested(wiimote.NewEventReader(eventPath), "WiimoteEventReader")
 		if err != nil {
 			dialog.ShowError(err, u.mainWindow)
+			return
 		}
-	} else if dev == wiimote.Nunchuk {
-		u.extension = wiimote.Nunchuk
+		u.setWiimoteConnected()
+	} else if dev == wiimote.Nunchuk && u.extension == wiimote.NoDevice {
 		u.extEventIbx, err = u.SpawnNested(wiimote.NewEventReader(eventPath), "NunchukEventReader")
 		if err != nil {
 			dialog.ShowError(err, u.mainWindow)
+			return
 		}
+		u.setExtConnected(dev)
 	}
-
-	u.setStatusLbl()
-}
-
-func (u *UI) RemoveDevice(dev wiimote.Device) {
-	switch dev {
-	case wiimote.Wiimote:
-		actor.SendStopMsg(u.moteEventIbx)
-		u.setWiimoteDisconnected()
-		fallthrough
-	case wiimote.Nunchuk:
-		actor.SendStopMsg(u.extEventIbx)
-	default:
-	}
-
-	u.setStatusLbl()
 }
 
 func (u *UI) HandleKeyEvent(key wiimote.Keycode, state wiimote.KeyState) {
-	loggo.Infof("0x%02x %d", key, state)
+	loggo.Infof("0x%03x %d", key, state)
 	name := u.mapEditor.KeyFor(key)
 	uiKey, ok := fyneToUinputKey[name]
 
+	loggo.Debug(name, uiKey)
 	if name == desktop.KeyNone || !ok {
 		return
 	}
@@ -129,16 +116,47 @@ func (u *UI) HandleKeyEvent(key wiimote.Keycode, state wiimote.KeyState) {
 	}
 }
 
+func (u *UI) HandleLastMsg(a actor.Actor, reason error) error {
+	if !u.IsStopping() {
+		defer u.setStatusLbl()
+		if a == nil {
+			return nil
+		}
+
+		loggo.Debug("%+v", a)
+		switch a.ID() {
+		case "WiimoteEventReader":
+			u.setWiimoteDisconnected()
+		case "NunchukEventReader":
+			u.setExtDisconnected()
+		default:
+		}
+	}
+	return nil
+}
+
 func (u *UI) setWiimoteConnected() {
+	loggo.Info("Wiimote connected")
 	u.wiimoteConnected = true
 	u.activityBar.Hide()
 	u.activityBar.Stop()
 }
 
 func (u *UI) setWiimoteDisconnected() {
+	loggo.Info("Wiimote disconnected")
 	u.wiimoteConnected = false
 	u.activityBar.Show()
 	u.activityBar.Start()
+}
+
+func (u *UI) setExtConnected(ext wiimote.Device) {
+	loggo.Info(ext, "connected")
+	u.extension = ext
+}
+
+func (u *UI) setExtDisconnected() {
+	loggo.Info(u.extension, "disconnected")
+	u.extension = wiimote.NoDevice
 }
 
 func (u *UI) setStatusLbl() {

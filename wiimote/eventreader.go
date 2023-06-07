@@ -20,20 +20,20 @@ type KeyInfo struct {
 
 const (
 	// Wiimote held vertically
-	BtnA     Keycode = 0x0304
-	BtnB             = 0x0305
-	Btn1             = 0x0257
-	Btn2             = 0x0258
-	BtnUp            = 0x0103
-	BtnRight         = 0x0106
-	BtnLeft          = 0x0105
-	BtnDown          = 0x0108
-	BtnPlus          = 0x0407
-	BtnMinus         = 0x0412
-	BtnHome          = 0x0316
+	BtnA     Keycode = 0x130
+	BtnB             = 0x131
+	Btn1             = 0x101
+	Btn2             = 0x102
+	BtnUp            = 0x67
+	BtnRight         = 0x6A
+	BtnLeft          = 0x69
+	BtnDown          = 0x6C
+	BtnPlus          = 0x197
+	BtnMinus         = 0x19C
+	BtnHome          = 0x13C
 
-	BtnZ = 0x0135
-	BtnC = 0x0132
+	BtnZ = 0x135
+	BtnC = 0x132
 
 	Pressed  KeyState = 0x01
 	Released          = 0x00
@@ -91,11 +91,11 @@ func (e *EventReader) Initialize() error {
 			err = binary.Read(file, binary.LittleEndian, ev)
 			if err != nil {
 				loggo.Error(err)
-				loggo.Info("Wiimote disconnected")
+				actor.SendStopMsg(e.Inbox())
 				return
 			}
 			if ev.Type == Key {
-				loggo.Debug("%+v", ev)
+				loggo.Debugf("%x", ev.Code)
 				sendKeyEvent(
 					e.CreatorInbox(),
 					Keycode(ev.Code),
