@@ -9,9 +9,14 @@ import (
 	actor "gitlab.com/prithvivishak/goactor"
 )
 
-type Keycode uint16
-type KeyState uint32
 type EventType uint16
+type EventCode uint16
+type EventVal int32
+
+type Keycode EventCode
+type KeyState uint32
+
+type StickID EventCode
 
 type KeyInfo struct {
 	Code       Keycode
@@ -42,6 +47,9 @@ const (
 	Key      EventType = 0x01
 	Relative EventType = 0x02
 	Absolute EventType = 0x03
+
+	NunchukX StickID = 0x10
+	NunchukY         = 0x11
 )
 
 var KeyMap = map[Keycode]KeyInfo{
@@ -65,8 +73,8 @@ var KeyMap = map[Keycode]KeyInfo{
 type InputEvent struct {
 	Timestamp syscall.Timeval
 	Type      EventType
-	Code      uint16
-	Value     uint32
+	Code      EventCode
+	Value     EventVal
 }
 
 type EventReader struct {
@@ -94,13 +102,20 @@ func (e *EventReader) Initialize() error {
 				actor.SendStopMsg(e.Inbox())
 				return
 			}
-			if ev.Type == Key {
+			switch ev.Type {
+			case Key:
 				loggo.Debugf("%x", ev.Code)
 				sendKeyEvent(
 					e.CreatorInbox(),
 					Keycode(ev.Code),
 					KeyState(ev.Value),
 				)
+			case Absolute:
+				stID := StickID(ev.Code)
+				if stID == NunchukX || stID == NunchukY {
+					sendStickEvent(e.CreatorInbox(), stID, ev.Value)
+				}
+			default:
 			}
 		}
 	}()

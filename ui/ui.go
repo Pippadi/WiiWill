@@ -144,6 +144,16 @@ func (u *UI) HandleKeyEvent(key wiimote.Keycode, state wiimote.KeyState) {
 	}
 }
 
+func (u *UI) HandleStickEvent(stID wiimote.StickID, val wiimote.EventVal) {
+	if u.mapEditor.StickAsMouse() {
+		if stID == wiimote.NunchukX {
+			u.mouse.Move(int32(val), 0)
+		} else if stID == wiimote.NunchukY {
+			u.mouse.Move(0, int32(-val))
+		}
+	}
+}
+
 func (u *UI) HandleLastMsg(a actor.Actor, reason error) error {
 	if !u.IsStopping() {
 		defer u.setStatusLbl()

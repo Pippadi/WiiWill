@@ -25,7 +25,10 @@ type MapEditor struct {
 
 	buttons   map[wiimote.Keycode]*widget.Button
 	selectors map[wiimote.Keycode]*KeyChooser
-	mapping   map[wiimote.Keycode]fyne.KeyName
+	Mapping   map[wiimote.Keycode]fyne.KeyName `json:"KeyMap"`
+
+	StickToMouse      bool `json:"StickAsMouse"`
+	stickToMouseCheck *widget.Check
 }
 
 func New(a fyne.App, w fyne.Window) *MapEditor {
@@ -34,7 +37,7 @@ func New(a fyne.App, w fyne.Window) *MapEditor {
 	m.parentWindow = w
 	m.buttons = make(map[wiimote.Keycode]*widget.Button)
 	m.selectors = make(map[wiimote.Keycode]*KeyChooser)
-	m.mapping = make(map[wiimote.Keycode]fyne.KeyName)
+	m.Mapping = make(map[wiimote.Keycode]fyne.KeyName)
 
 	m.loadBtn = widget.NewButtonWithIcon("Load", theme.UploadIcon(), m.loadMap)
 	m.saveBtn = widget.NewButtonWithIcon("Save", theme.FileIcon(), m.saveMap)
@@ -43,7 +46,7 @@ func New(a fyne.App, w fyne.Window) *MapEditor {
 		m.buttons[c] = m.remapBtnFor(c)
 		m.selectors[c] = NewKeyChooser(m.parentWindow)
 		m.selectors[c].OnChanged = m.chooserChangeHandler(c)
-		m.mapping[c] = desktop.KeyNone
+		m.Mapping[c] = desktop.KeyNone
 	}
 
 	// Map stores elements in arbitrary order, so order buttons manually
@@ -61,9 +64,12 @@ func New(a fyne.App, w fyne.Window) *MapEditor {
 		widget.NewFormItem(wiimote.KeyMap[wiimote.BtnHome].PrettyName, m.buttons[wiimote.BtnHome]),
 	)
 
+	m.StickToMouse = false
+	m.stickToMouseCheck = widget.NewCheck("Move mouse", func(y bool) { m.StickToMouse = y })
 	nf := widget.NewForm(
 		widget.NewFormItem(wiimote.KeyMap[wiimote.BtnZ].PrettyName, m.buttons[wiimote.BtnZ]),
 		widget.NewFormItem(wiimote.KeyMap[wiimote.BtnC].PrettyName, m.buttons[wiimote.BtnC]),
+		widget.NewFormItem("Stick", m.stickToMouseCheck),
 	)
 
 	tabs := container.NewAppTabs(
@@ -89,7 +95,7 @@ func (m *MapEditor) UI() fyne.CanvasObject {
 
 func (m *MapEditor) chooserChangeHandler(c wiimote.Keycode) func(fyne.KeyName) {
 	return func(n fyne.KeyName) {
-		m.mapping[c] = n
+		m.Mapping[c] = n
 		if n == desktop.KeyNone {
 			m.buttons[c].SetText("None")
 		} else {
@@ -122,7 +128,7 @@ func (m *MapEditor) loadMapFromFile(file fyne.URIReadCloser, err error) {
 	}
 
 	jsonBytes = jsonBytes[:n]
-	err = json.Unmarshal(jsonBytes, &(m.mapping))
+	err = json.Unmarshal(jsonBytes, m)
 	if err != nil {
 		loggo.Error(err)
 		dialog.ShowError(errors.New("Unable to parse file"), m.parentWindow)
@@ -147,7 +153,7 @@ func (m *MapEditor) saveMapToFile(file fyne.URIWriteCloser, err error) {
 	}
 	defer file.Close()
 
-	jsonBytes, err := json.MarshalIndent(m.mapping, "", "\t")
+	jsonBytes, err := json.MarshalIndent(m, "", "\t")
 	if err != nil {
 		loggo.Error(err)
 		dialog.ShowError(errors.New("Unable to assemble file contents"), m.parentWindow)
@@ -168,15 +174,20 @@ func (m *MapEditor) remapBtnFor(c wiimote.Keycode) *widget.Button {
 }
 
 func (m *MapEditor) updateButtonsFromMap() {
-	for wiicode, keyname := range m.mapping {
+	for wiicode, keyname := range m.Mapping {
 		m.selectors[wiicode].SetValue(keyname)
 	}
+	m.stickToMouseCheck.SetChecked(m.StickToMouse)
 }
 
 func (m *MapEditor) KeyFor(code wiimote.Keycode) fyne.KeyName {
-	name, ok := m.mapping[code]
+	name, ok := m.Mapping[code]
 	if !ok {
 		return desktop.KeyNone
 	}
 	return name
+}
+
+func (m *MapEditor) StickAsMouse() bool {
+	return m.StickToMouse
 }
