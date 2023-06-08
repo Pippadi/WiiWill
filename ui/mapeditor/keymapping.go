@@ -1,4 +1,4 @@
-package ui
+package mapeditor
 
 import (
 	"fyne.io/fyne/v2"
@@ -6,7 +6,13 @@ import (
 	"github.com/bendahl/uinput"
 )
 
-var fyneToUinputKey = map[fyne.KeyName]int{
+const (
+	MouseLeft   fyne.KeyName = "Mouse Left Click"
+	MouseRight  fyne.KeyName = "Mouse Right Click"
+	MouseMiddle fyne.KeyName = "Mouse Middle Click"
+)
+
+var FyneToUinputKey = map[fyne.KeyName]int{
 	fyne.Key1:               uinput.Key1,
 	fyne.Key2:               uinput.Key2,
 	fyne.Key3:               uinput.Key3,

@@ -32,6 +32,7 @@ type UI struct {
 	mapEditor *mapeditor.MapEditor
 
 	keyboard         uinput.Keyboard
+	mouse            uinput.Mouse
 	wiimoteConnected bool
 	extension        wiimote.Device
 }
@@ -51,7 +52,7 @@ func (u *UI) Initialize() (err error) {
 
 	u.activityBar = widget.NewProgressBarInfinite()
 	u.statusLbl = widget.NewLabel("")
-	u.mapEditor = mapeditor.New(u.mainWindow)
+	u.mapEditor = mapeditor.New(u.wwApp, u.mainWindow)
 
 	box := container.NewVBox(
 		u.mapEditor.UI(),
@@ -71,6 +72,10 @@ func (u *UI) Initialize() (err error) {
 	u.setStatusLbl()
 	u.finderIbx, _ = u.SpawnNested(wiimote.NewFinder(), "Finder")
 	u.keyboard, err = uinput.CreateKeyboard("/dev/uinput", []byte("WiiWill"))
+	if err != nil {
+		return err
+	}
+	u.mouse, err = uinput.CreateMouse("/dev/uinput", []byte("WiiWill"))
 
 	return err
 }
@@ -102,17 +107,40 @@ func (u *UI) AddDevice(dev wiimote.Device, eventPath string) {
 func (u *UI) HandleKeyEvent(key wiimote.Keycode, state wiimote.KeyState) {
 	loggo.Infof("0x%03x %d", key, state)
 	name := u.mapEditor.KeyFor(key)
-	uiKey, ok := fyneToUinputKey[name]
 
-	loggo.Debug(name, uiKey)
-	if name == desktop.KeyNone || !ok {
+	switch name {
+	case desktop.KeyNone:
 		return
-	}
+	case mapeditor.MouseLeft:
+		if state == wiimote.Pressed {
+			u.mouse.LeftPress()
+		} else {
+			u.mouse.LeftRelease()
+		}
+	case mapeditor.MouseMiddle:
+		if state == wiimote.Pressed {
+			u.mouse.MiddlePress()
+		} else {
+			u.mouse.MiddleRelease()
+		}
+	case mapeditor.MouseRight:
+		if state == wiimote.Pressed {
+			u.mouse.RightPress()
+		} else {
+			u.mouse.RightRelease()
+		}
+	default:
+		uiKey, ok := mapeditor.FyneToUinputKey[name]
+		if !ok {
+			return
+		}
+		loggo.Debug(name, uiKey)
 
-	if state == wiimote.Pressed {
-		u.keyboard.KeyDown(uiKey)
-	} else {
-		u.keyboard.KeyUp(uiKey)
+		if state == wiimote.Pressed {
+			u.keyboard.KeyDown(uiKey)
+		} else {
+			u.keyboard.KeyUp(uiKey)
+		}
 	}
 }
 

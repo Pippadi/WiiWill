@@ -16,48 +16,55 @@ import (
 )
 
 type MapEditor struct {
+	parentApp     fyne.App
 	parentWindow  fyne.Window
 	mainContainer fyne.CanvasObject
 
 	loadBtn *widget.Button
 	saveBtn *widget.Button
 
-	buttons map[wiimote.Keycode]*widget.Button
-	mapping map[wiimote.Keycode]fyne.KeyName
+	buttons   map[wiimote.Keycode]*widget.Button
+	selectors map[wiimote.Keycode]*KeyChooser
+	mapping   map[wiimote.Keycode]fyne.KeyName
 }
 
-func New(w fyne.Window) *MapEditor {
+func New(a fyne.App, w fyne.Window) *MapEditor {
 	m := new(MapEditor)
+	m.parentApp = a
 	m.parentWindow = w
 	m.buttons = make(map[wiimote.Keycode]*widget.Button)
+	m.selectors = make(map[wiimote.Keycode]*KeyChooser)
 	m.mapping = make(map[wiimote.Keycode]fyne.KeyName)
 
 	m.loadBtn = widget.NewButtonWithIcon("Load", theme.UploadIcon(), m.loadMap)
 	m.saveBtn = widget.NewButtonWithIcon("Save", theme.FileIcon(), m.saveMap)
 
 	for c, _ := range wiimote.KeyMap {
-		m.buttons[c] = widget.NewButton("None", nil)
-		m.buttons[c].OnTapped = m.remapButtonHandler(m.buttons[c], c)
+		m.buttons[c] = m.remapBtnFor(c)
+		m.selectors[c] = NewKeyChooser(m.parentWindow)
+		m.selectors[c].OnChanged = m.chooserChangeHandler(c)
 		m.mapping[c] = desktop.KeyNone
 	}
 
 	// Map stores elements in arbitrary order, so order buttons manually
-	f := widget.NewForm()
-	f.AppendItem(widget.NewFormItem(wiimote.KeyMap[wiimote.BtnUp].PrettyName, m.buttons[wiimote.BtnUp]))
-	f.AppendItem(widget.NewFormItem(wiimote.KeyMap[wiimote.BtnDown].PrettyName, m.buttons[wiimote.BtnDown]))
-	f.AppendItem(widget.NewFormItem(wiimote.KeyMap[wiimote.BtnLeft].PrettyName, m.buttons[wiimote.BtnLeft]))
-	f.AppendItem(widget.NewFormItem(wiimote.KeyMap[wiimote.BtnRight].PrettyName, m.buttons[wiimote.BtnRight]))
-	f.AppendItem(widget.NewFormItem(wiimote.KeyMap[wiimote.BtnA].PrettyName, m.buttons[wiimote.BtnA]))
-	f.AppendItem(widget.NewFormItem(wiimote.KeyMap[wiimote.BtnB].PrettyName, m.buttons[wiimote.BtnB]))
-	f.AppendItem(widget.NewFormItem(wiimote.KeyMap[wiimote.Btn1].PrettyName, m.buttons[wiimote.Btn1]))
-	f.AppendItem(widget.NewFormItem(wiimote.KeyMap[wiimote.Btn2].PrettyName, m.buttons[wiimote.Btn2]))
-	f.AppendItem(widget.NewFormItem(wiimote.KeyMap[wiimote.BtnPlus].PrettyName, m.buttons[wiimote.BtnPlus]))
-	f.AppendItem(widget.NewFormItem(wiimote.KeyMap[wiimote.BtnMinus].PrettyName, m.buttons[wiimote.BtnMinus]))
-	f.AppendItem(widget.NewFormItem(wiimote.KeyMap[wiimote.BtnHome].PrettyName, m.buttons[wiimote.BtnHome]))
+	f := widget.NewForm(
+		widget.NewFormItem(wiimote.KeyMap[wiimote.BtnUp].PrettyName, m.buttons[wiimote.BtnUp]),
+		widget.NewFormItem(wiimote.KeyMap[wiimote.BtnDown].PrettyName, m.buttons[wiimote.BtnDown]),
+		widget.NewFormItem(wiimote.KeyMap[wiimote.BtnLeft].PrettyName, m.buttons[wiimote.BtnLeft]),
+		widget.NewFormItem(wiimote.KeyMap[wiimote.BtnRight].PrettyName, m.buttons[wiimote.BtnRight]),
+		widget.NewFormItem(wiimote.KeyMap[wiimote.BtnA].PrettyName, m.buttons[wiimote.BtnA]),
+		widget.NewFormItem(wiimote.KeyMap[wiimote.BtnB].PrettyName, m.buttons[wiimote.BtnB]),
+		widget.NewFormItem(wiimote.KeyMap[wiimote.Btn1].PrettyName, m.buttons[wiimote.Btn1]),
+		widget.NewFormItem(wiimote.KeyMap[wiimote.Btn2].PrettyName, m.buttons[wiimote.Btn2]),
+		widget.NewFormItem(wiimote.KeyMap[wiimote.BtnPlus].PrettyName, m.buttons[wiimote.BtnPlus]),
+		widget.NewFormItem(wiimote.KeyMap[wiimote.BtnMinus].PrettyName, m.buttons[wiimote.BtnMinus]),
+		widget.NewFormItem(wiimote.KeyMap[wiimote.BtnHome].PrettyName, m.buttons[wiimote.BtnHome]),
+	)
 
-	nf := widget.NewForm()
-	nf.AppendItem(widget.NewFormItem(wiimote.KeyMap[wiimote.BtnZ].PrettyName, m.buttons[wiimote.BtnZ]))
-	nf.AppendItem(widget.NewFormItem(wiimote.KeyMap[wiimote.BtnC].PrettyName, m.buttons[wiimote.BtnC]))
+	nf := widget.NewForm(
+		widget.NewFormItem(wiimote.KeyMap[wiimote.BtnZ].PrettyName, m.buttons[wiimote.BtnZ]),
+		widget.NewFormItem(wiimote.KeyMap[wiimote.BtnC].PrettyName, m.buttons[wiimote.BtnC]),
+	)
 
 	tabs := container.NewAppTabs(
 		container.NewTabItem("Wiimote", f),
@@ -80,15 +87,14 @@ func (m *MapEditor) UI() fyne.CanvasObject {
 	return m.mainContainer
 }
 
-func (m *MapEditor) remapButtonHandler(b *widget.Button, c wiimote.Keycode) func() {
-	return func() {
-		b.SetText("Waiting for keypress...")
-		m.parentWindow.Canvas().SetOnTypedKey(
-			func(e *fyne.KeyEvent) {
-				b.SetText(string(e.Name))
-				m.mapping[c] = e.Name
-				m.parentWindow.Canvas().SetOnTypedKey(nil)
-			})
+func (m *MapEditor) chooserChangeHandler(c wiimote.Keycode) func(fyne.KeyName) {
+	return func(n fyne.KeyName) {
+		m.mapping[c] = n
+		if n == desktop.KeyNone {
+			m.buttons[c].SetText("None")
+		} else {
+			m.buttons[c].SetText(string(n))
+		}
 	}
 }
 
@@ -155,13 +161,15 @@ func (m *MapEditor) saveMapToFile(file fyne.URIWriteCloser, err error) {
 	}
 }
 
+func (m *MapEditor) remapBtnFor(c wiimote.Keycode) *widget.Button {
+	return widget.NewButton("None", func() {
+		dialog.ShowCustom("Remap button", "OK", m.selectors[c], m.parentWindow)
+	})
+}
+
 func (m *MapEditor) updateButtonsFromMap() {
 	for wiicode, keyname := range m.mapping {
-		if keyname == desktop.KeyNone {
-			m.buttons[wiicode].SetText("None")
-		} else {
-			m.buttons[wiicode].SetText(string(keyname))
-		}
+		m.selectors[wiicode].SetValue(keyname)
 	}
 }
 
