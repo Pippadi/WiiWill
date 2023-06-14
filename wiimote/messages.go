@@ -5,7 +5,7 @@ import actor "gitlab.com/prithvivishak/goactor"
 type Manager interface {
 	AddDevice(dev Device, eventPath string)
 	HandleKeyEvent(Keycode, KeyState)
-	HandleStickEvent(StickID, EventVal)
+	HandleStickEvent(Stick, EventVal)
 }
 
 func addDevice(dest actor.Inbox, device Device, eventPath string) {
@@ -22,7 +22,7 @@ func sendKeyEvent(dest actor.Inbox, btn Keycode, state KeyState) {
 	}
 }
 
-func sendStickEvent(dest actor.Inbox, stID StickID, val EventVal) {
+func sendStickEvent(dest actor.Inbox, stID Stick, val EventVal) {
 	dest <- func(a actor.Actor) error {
 		a.(Manager).HandleStickEvent(stID, val)
 		return nil

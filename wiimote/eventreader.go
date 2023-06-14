@@ -16,7 +16,8 @@ type EventVal int32
 type Keycode EventCode
 type KeyState uint32
 
-type StickID EventCode
+type Stick EventCode
+type StickAxis EventCode
 
 type KeyInfo struct {
 	Code       Keycode
@@ -48,8 +49,12 @@ const (
 	Relative EventType = 0x02
 	Absolute EventType = 0x03
 
-	NunchukX StickID = 0x10
-	NunchukY         = 0x11
+	StickMask Stick = 0xF0
+	AxisMask  Stick = 0x0F
+
+	NunchukStick Stick = 0x10
+	NunchukX           = 0x00
+	NunchukY           = 0x01
 )
 
 var KeyMap = map[Keycode]KeyInfo{
@@ -67,6 +72,10 @@ var KeyMap = map[Keycode]KeyInfo{
 
 	BtnZ: KeyInfo{BtnZ, "Z"},
 	BtnC: KeyInfo{BtnC, "C"},
+}
+
+var StickMap = map[Stick]string{
+	NunchukStick: "Nunchuk Stick",
 }
 
 // See https://www.kernel.org/doc/Documentation/input/input.txt
@@ -111,9 +120,9 @@ func (e *EventReader) Initialize() error {
 					KeyState(ev.Value),
 				)
 			case Absolute:
-				stID := StickID(ev.Code)
-				if stID == NunchukX || stID == NunchukY {
-					sendStickEvent(e.CreatorInbox(), stID, ev.Value)
+				id := Stick(ev.Code)
+				if id&StickMask == NunchukStick {
+					sendStickEvent(e.CreatorInbox(), id, ev.Value)
 				}
 			default:
 			}

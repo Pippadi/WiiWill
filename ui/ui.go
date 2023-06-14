@@ -144,11 +144,12 @@ func (u *UI) HandleKeyEvent(key wiimote.Keycode, state wiimote.KeyState) {
 	}
 }
 
-func (u *UI) HandleStickEvent(stID wiimote.StickID, val wiimote.EventVal) {
-	if u.mapEditor.StickAsMouse() {
-		if stID == wiimote.NunchukX {
+func (u *UI) HandleStickEvent(stID wiimote.Stick, val wiimote.EventVal) {
+	cfg := u.mapEditor.StickConfigFor(stID)
+	if cfg.AsMouse {
+		if stID|wiimote.AxisMask == wiimote.NunchukX {
 			u.mouse.Move(int32(val), 0)
-		} else if stID == wiimote.NunchukY {
+		} else if stID|wiimote.AxisMask == wiimote.NunchukY {
 			u.mouse.Move(0, int32(-val))
 		}
 	}

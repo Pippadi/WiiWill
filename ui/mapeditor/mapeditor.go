@@ -27,8 +27,8 @@ type MapEditor struct {
 	selectors map[wiimote.Keycode]*KeyChooser
 	Mapping   map[wiimote.Keycode]fyne.KeyName `json:"KeyMap"`
 
-	StickToMouse      bool `json:"StickAsMouse"`
-	stickToMouseCheck *widget.Check
+	StickConfigs       map[wiimote.Stick]StickConfig `json:"StickConfig"`
+	stickConfigurators map[wiimote.Stick]*StickConfigurator
 }
 
 func New(a fyne.App, w fyne.Window) *MapEditor {
@@ -38,6 +38,8 @@ func New(a fyne.App, w fyne.Window) *MapEditor {
 	m.buttons = make(map[wiimote.Keycode]*widget.Button)
 	m.selectors = make(map[wiimote.Keycode]*KeyChooser)
 	m.Mapping = make(map[wiimote.Keycode]fyne.KeyName)
+	m.StickConfigs = make(map[wiimote.Stick]StickConfig)
+	m.stickConfigurators = make(map[wiimote.Stick]*StickConfigurator)
 
 	m.loadBtn = widget.NewButtonWithIcon("Load", theme.UploadIcon(), m.loadMap)
 	m.saveBtn = widget.NewButtonWithIcon("Save", theme.FileIcon(), m.saveMap)
@@ -47,6 +49,11 @@ func New(a fyne.App, w fyne.Window) *MapEditor {
 		m.selectors[c] = NewKeyChooser(m.parentWindow)
 		m.selectors[c].OnChanged = m.chooserChangeHandler(c)
 		m.Mapping[c] = desktop.KeyNone
+	}
+	for s, _ := range wiimote.StickMap {
+		m.StickConfigs[s] = StickConfig{}
+		m.stickConfigurators[s] = NewStickConfigurator(m.parentWindow)
+		m.stickConfigurators[s].OnChanged = m.updateStickCfgFor(s)
 	}
 
 	// Map stores elements in arbitrary order, so order buttons manually
@@ -64,12 +71,10 @@ func New(a fyne.App, w fyne.Window) *MapEditor {
 		widget.NewFormItem(wiimote.KeyMap[wiimote.BtnHome].PrettyName, m.buttons[wiimote.BtnHome]),
 	)
 
-	m.StickToMouse = false
-	m.stickToMouseCheck = widget.NewCheck("Move mouse", func(y bool) { m.StickToMouse = y })
 	nf := widget.NewForm(
 		widget.NewFormItem(wiimote.KeyMap[wiimote.BtnZ].PrettyName, m.buttons[wiimote.BtnZ]),
 		widget.NewFormItem(wiimote.KeyMap[wiimote.BtnC].PrettyName, m.buttons[wiimote.BtnC]),
-		widget.NewFormItem("Stick", m.stickToMouseCheck),
+		widget.NewFormItem(wiimote.StickMap[wiimote.NunchukStick], m.configBtnFor(wiimote.NunchukStick)),
 	)
 
 	tabs := container.NewAppTabs(
@@ -173,11 +178,25 @@ func (m *MapEditor) remapBtnFor(c wiimote.Keycode) *widget.Button {
 	})
 }
 
+func (m *MapEditor) configBtnFor(c wiimote.Stick) *widget.Button {
+	return widget.NewButton("Configure", func() {
+		dialog.ShowCustom("Configure stick", "OK", m.stickConfigurators[c], m.parentWindow)
+	})
+}
+
+func (m *MapEditor) updateStickCfgFor(c wiimote.Stick) func(StickConfig) {
+	return func(cfg StickConfig) {
+		m.StickConfigs[c] = cfg
+	}
+}
+
 func (m *MapEditor) updateButtonsFromMap() {
 	for wiicode, keyname := range m.Mapping {
 		m.selectors[wiicode].SetValue(keyname)
 	}
-	m.stickToMouseCheck.SetChecked(m.StickToMouse)
+	for wiicode, cfg := range m.StickConfigs {
+		m.stickConfigurators[wiicode].SetValue(cfg)
+	}
 }
 
 func (m *MapEditor) KeyFor(code wiimote.Keycode) fyne.KeyName {
@@ -188,6 +207,10 @@ func (m *MapEditor) KeyFor(code wiimote.Keycode) fyne.KeyName {
 	return name
 }
 
-func (m *MapEditor) StickAsMouse() bool {
-	return m.StickToMouse
+func (m *MapEditor) StickConfigFor(stick wiimote.Stick) StickConfig {
+	cfg, ok := m.StickConfigs[stick]
+	if !ok {
+		return StickConfig{false, 0}
+	}
+	return cfg
 }
