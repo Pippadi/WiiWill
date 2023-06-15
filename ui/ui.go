@@ -145,12 +145,14 @@ func (u *UI) HandleKeyEvent(key wiimote.Keycode, state wiimote.KeyState) {
 }
 
 func (u *UI) HandleStickEvent(stID wiimote.Stick, val wiimote.EventVal) {
-	cfg := u.mapEditor.StickConfigFor(stID)
+	cfg := u.mapEditor.StickConfigFor(stID & wiimote.StickMask)
+	loggo.Debugf("%+v", cfg)
 	if cfg.AsMouse {
-		if stID|wiimote.AxisMask == wiimote.NunchukX {
-			u.mouse.Move(int32(val), 0)
-		} else if stID|wiimote.AxisMask == wiimote.NunchukY {
-			u.mouse.Move(0, int32(-val))
+		scaledVal := int32(float64(val) * cfg.Speed)
+		if stID&wiimote.AxisMask == wiimote.NunchukX {
+			u.mouse.Move(scaledVal, 0)
+		} else if stID&wiimote.AxisMask == wiimote.NunchukY {
+			u.mouse.Move(0, -scaledVal)
 		}
 	}
 }
