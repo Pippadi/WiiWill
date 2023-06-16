@@ -1,18 +1,18 @@
 package ui
 
 import (
+	"math"
 	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
-	"fyne.io/fyne/v2/driver/desktop"
 	"fyne.io/fyne/v2/widget"
+	"github.com/Pippadi/WiiWill/input"
 	"github.com/Pippadi/WiiWill/ui/mapeditor"
 	"github.com/Pippadi/WiiWill/wiimote"
 	"github.com/Pippadi/loggo"
-	"github.com/bendahl/uinput"
 	actor "gitlab.com/prithvivishak/goactor"
 )
 
@@ -22,6 +22,7 @@ type UI struct {
 	finderIbx    actor.Inbox
 	moteEventIbx actor.Inbox
 	extEventIbx  actor.Inbox
+	inputIbx     actor.Inbox
 
 	wwApp      fyne.App
 	mainWindow fyne.Window
@@ -31,8 +32,6 @@ type UI struct {
 
 	mapEditor *mapeditor.MapEditor
 
-	keyboard         uinput.Keyboard
-	mouse            uinput.Mouse
 	wiimoteConnected bool
 	extension        wiimote.Device
 }
@@ -71,11 +70,7 @@ func (u *UI) Initialize() (err error) {
 
 	u.setStatusLbl()
 	u.finderIbx, _ = u.SpawnNested(wiimote.NewFinder(), "Finder")
-	u.keyboard, err = uinput.CreateKeyboard("/dev/uinput", []byte("WiiWill"))
-	if err != nil {
-		return err
-	}
-	u.mouse, err = uinput.CreateMouse("/dev/uinput", []byte("WiiWill"))
+	u.inputIbx, err = u.SpawnNested(input.New(), "Inputter")
 
 	return err
 }
@@ -107,52 +102,25 @@ func (u *UI) AddDevice(dev wiimote.Device, eventPath string) {
 func (u *UI) HandleKeyEvent(key wiimote.Keycode, state wiimote.KeyState) {
 	loggo.Infof("0x%03x %d", key, state)
 	name := u.mapEditor.KeyFor(key)
-
-	switch name {
-	case desktop.KeyNone:
-		return
-	case mapeditor.MouseLeft:
-		if state == wiimote.Pressed {
-			u.mouse.LeftPress()
-		} else {
-			u.mouse.LeftRelease()
-		}
-	case mapeditor.MouseMiddle:
-		if state == wiimote.Pressed {
-			u.mouse.MiddlePress()
-		} else {
-			u.mouse.MiddleRelease()
-		}
-	case mapeditor.MouseRight:
-		if state == wiimote.Pressed {
-			u.mouse.RightPress()
-		} else {
-			u.mouse.RightRelease()
-		}
-	default:
-		uiKey, ok := mapeditor.FyneToUinputKey[name]
-		if !ok {
-			return
-		}
-		loggo.Debug(name, uiKey)
-
-		if state == wiimote.Pressed {
-			u.keyboard.KeyDown(uiKey)
-		} else {
-			u.keyboard.KeyUp(uiKey)
-		}
-	}
+	input.SendKeyEvent(u.inputIbx, name, state == wiimote.Pressed)
 }
 
 func (u *UI) HandleStickEvent(stID wiimote.Stick, val wiimote.EventVal) {
 	cfg := u.mapEditor.StickConfigFor(stID & wiimote.StickMask)
-	loggo.Debugf("%+v", cfg)
+	loggo.Debugf("0x%x %d", stID, val)
+	vf64 := float64(val) // range -100 to 100
+
+	if math.Abs(vf64) < 5 {
+		// Discard miniscule movements of the stick about its mean position
+		vf64 = 0
+	}
+
 	if cfg.AsMouse {
-		scaledVal := int32(float64(val) * cfg.Speed)
+		scaledVal := int32(vf64 * cfg.Speed)
 		if stID&wiimote.AxisMask == wiimote.NunchukX {
-			u.mouse.Move(scaledVal, 0)
+			input.SendMouseXSpeed(u.inputIbx, scaledVal)
 		} else if stID&wiimote.AxisMask == wiimote.NunchukY {
-			u.mouse.Move(0, -scaledVal)
+			input.SendMouseYSpeed(u.inputIbx, -scaledVal)
 		}
 	}
 }
@@ -198,6 +166,8 @@ func (u *UI) setExtConnected(ext wiimote.Device) {
 func (u *UI) setExtDisconnected() {
 	loggo.Info(u.extension, "disconnected")
 	u.extension = wiimote.NoDevice
+	input.SendMouseXSpeed(u.inputIbx, 0)
+	input.SendMouseYSpeed(u.inputIbx, 0)
 }
 
 func (u *UI) setStatusLbl() {

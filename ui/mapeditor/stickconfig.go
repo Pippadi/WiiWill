@@ -30,8 +30,8 @@ func NewStickConfigurator(w fyne.Window) *StickConfigurator {
 	k.parentWindow = w
 
 	k.asMouseChk = widget.NewCheck("Control mouse", k.conditionallyDisableInputs)
-	k.speedSlider = widget.NewSlider(0.2, 2.0)
-	k.speedSlider.Step = 0.1
+	k.speedSlider = widget.NewSlider(0.05, 1.0)
+	k.speedSlider.Step = 0.05
 	k.speedSlider.OnChanged = k.setSpeed
 
 	k.speedSlider.SetValue(1.0)
