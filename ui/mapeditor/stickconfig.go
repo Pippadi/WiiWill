@@ -19,6 +19,7 @@ type StickConfigurator struct {
 
 	asMouseChk  *widget.Check
 	speedSlider *widget.Slider
+	speedLbl    *widget.Label
 
 	OnChanged func(StickConfig)
 }
@@ -31,6 +32,7 @@ func NewStickConfigurator(w fyne.Window) *StickConfigurator {
 
 	k.asMouseChk = widget.NewCheck("Control mouse", k.conditionallyDisableInputs)
 	k.speedSlider = widget.NewSlider(0.05, 1.0)
+	k.speedLbl = widget.NewLabel("Speed")
 	k.speedSlider.Step = 0.05
 	k.speedSlider.OnChanged = k.setSpeed
 
@@ -42,8 +44,10 @@ func NewStickConfigurator(w fyne.Window) *StickConfigurator {
 
 func (k *StickConfigurator) conditionallyDisableInputs(asMouse bool) {
 	if asMouse {
+		k.speedLbl.Show()
 		k.speedSlider.Show()
 	} else {
+		k.speedLbl.Hide()
 		k.speedSlider.Hide()
 	}
 
@@ -68,35 +72,42 @@ func (k *StickConfigurator) SetValue(val StickConfig) {
 }
 
 func (k *StickConfigurator) CreateRenderer() fyne.WidgetRenderer {
-	return &stickConfigRenderer{check: k.asMouseChk, slider: k.speedSlider}
+	return &stickConfigRenderer{check: k.asMouseChk, slider: k.speedSlider, label: k.speedLbl}
 }
 
 type stickConfigRenderer struct {
 	check  *widget.Check
 	slider *widget.Slider
+	label  *widget.Label
 }
 
 func (r *stickConfigRenderer) Layout(sz fyne.Size) {
-	r.check.Move(fyne.NewPos(sz.Width/2-r.check.MinSize().Width/2, 0))
+	r.check.Move(fyne.NewPos((sz.Width-r.check.MinSize().Width)/2, 0))
 	r.check.Resize(r.check.MinSize())
-	r.slider.Move(fyne.NewPos(0, r.check.MinSize().Height))
-	r.slider.Resize(fyne.NewSize(sz.Width, r.slider.MinSize().Height))
+	r.label.Move(fyne.NewPos(0, r.check.MinSize().Height))
+	r.label.Resize(r.label.MinSize())
+	r.slider.Move(fyne.NewPos(
+		r.label.MinSize().Width,
+		r.check.MinSize().Height+(sz.Height-r.check.MinSize().Height-r.slider.MinSize().Height)/2,
+	))
+	r.slider.Resize(fyne.NewSize(sz.Width-r.label.MinSize().Width, r.slider.MinSize().Height))
 }
 
 func (r *stickConfigRenderer) MinSize() fyne.Size {
 	return fyne.NewSize(
-		r.slider.MinSize().Width,
-		r.check.MinSize().Height+r.slider.MinSize().Height,
+		200,
+		r.check.MinSize().Height+r.label.MinSize().Height,
 	)
 }
 
 func (r *stickConfigRenderer) Refresh() {
 	r.check.Refresh()
 	r.slider.Refresh()
+	r.label.Refresh()
 }
 
 func (r *stickConfigRenderer) Objects() []fyne.CanvasObject {
-	return []fyne.CanvasObject{r.check, r.slider}
+	return []fyne.CanvasObject{r.check, r.slider, r.label}
 }
 
 func (r *stickConfigRenderer) Destroy() {}
