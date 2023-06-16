@@ -44,7 +44,7 @@ func New() *UI {
 }
 
 func (u *UI) Initialize() (err error) {
-	u.wwApp = app.NewWithID("com.github.Pippadi.WiiWill")
+	u.wwApp = app.NewWithID("dev.prithvi.WiiWill")
 	u.wwApp.Lifecycle().SetOnStopped(func() {
 		actor.SendStopMsg(u.Inbox())
 		u.wwApp.Preferences().SetString("MapFile", u.mapEditor.MapFile())
