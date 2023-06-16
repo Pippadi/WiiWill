@@ -10,11 +10,6 @@ Exec := "WiiWill"
 Icon := "WiiWill.png"
 
 default:
-	# User install
-	# Run "make user-install" to install in ~/.local/
-	# Run "make user-uninstall" to uninstall from ~/.local/
-	#
-	# System install
 	# Run "sudo make install" to install the application.
 	# Run "sudo make uninstall" to uninstall the application.
 
