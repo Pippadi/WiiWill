@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"io/ioutil"
 	"math"
 	"time"
 
@@ -46,12 +47,20 @@ func (u *UI) Initialize() (err error) {
 	u.wwApp = app.NewWithID("com.github.Pippadi.WiiWill")
 	u.wwApp.Lifecycle().SetOnStopped(func() {
 		actor.SendStopMsg(u.Inbox())
+		u.wwApp.Preferences().SetString("MapFile", u.mapEditor.MapFile())
+		time.Sleep(500 * time.Millisecond) // Wait for preferences to persist
 	})
 	u.mainWindow = u.wwApp.NewWindow("WiiWill")
 
 	u.activityBar = widget.NewProgressBarInfinite()
 	u.statusLbl = widget.NewLabel("")
-	u.mapEditor = mapeditor.New(u.wwApp, u.mainWindow)
+	u.mapEditor = mapeditor.New(u.mainWindow)
+	if mf := u.wwApp.Preferences().String("MapFile"); mf != "" {
+		bytes, err := ioutil.ReadFile(mf)
+		if err == nil {
+			u.mapEditor.LoadMapFromBytes(bytes)
+		}
+	}
 
 	box := container.NewVBox(
 		u.mapEditor.UI(),

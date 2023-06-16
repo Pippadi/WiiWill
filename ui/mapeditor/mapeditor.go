@@ -16,7 +16,6 @@ import (
 )
 
 type MapEditor struct {
-	parentApp     fyne.App
 	parentWindow  fyne.Window
 	mainContainer fyne.CanvasObject
 
@@ -29,11 +28,12 @@ type MapEditor struct {
 
 	StickConfigs       map[wiimote.Stick]StickConfig `json:"StickConfig"`
 	stickConfigurators map[wiimote.Stick]*StickConfigurator
+
+	mapFile string
 }
 
-func New(a fyne.App, w fyne.Window) *MapEditor {
+func New(w fyne.Window) *MapEditor {
 	m := new(MapEditor)
-	m.parentApp = a
 	m.parentWindow = w
 	m.buttons = make(map[wiimote.Keycode]*widget.Button)
 	m.selectors = make(map[wiimote.Keycode]*KeyChooser)
@@ -110,37 +110,43 @@ func (m *MapEditor) chooserChangeHandler(c wiimote.Keycode) func(fyne.KeyName) {
 }
 
 func (m *MapEditor) loadMap() {
-	dialog.ShowFileOpen(m.loadMapFromFile, m.parentWindow)
+	dialog.ShowFileOpen(func(file fyne.URIReadCloser, err error) {
+		if err != nil {
+			loggo.Error(err)
+			dialog.ShowError(err, m.parentWindow)
+			return
+		}
+		if file == nil {
+			return
+		}
+		defer file.Close()
+
+		jsonBytes := make([]byte, 2048)
+		n, err := file.Read(jsonBytes)
+		jsonBytes = jsonBytes[:n]
+		if err != nil {
+			loggo.Error(err)
+			dialog.ShowError(errors.New("Unable to read file"), m.parentWindow)
+		}
+
+		err = m.LoadMapFromBytes(jsonBytes)
+		if err != nil {
+			loggo.Error(err)
+			dialog.ShowError(errors.New("Unable to parse file"), m.parentWindow)
+		}
+		m.mapFile = file.URI().Path()
+	}, m.parentWindow,
+	)
 }
 
-func (m *MapEditor) loadMapFromFile(file fyne.URIReadCloser, err error) {
+func (m *MapEditor) LoadMapFromBytes(jsonBytes []byte) error {
+	err := json.Unmarshal(jsonBytes, m)
 	if err != nil {
-		loggo.Error(err)
-		dialog.ShowError(err, m.parentWindow)
-		return
-	}
-	if file == nil {
-		return
-	}
-	defer file.Close()
-
-	jsonBytes := make([]byte, 2048)
-	n, err := file.Read(jsonBytes)
-	if err != nil {
-		loggo.Error(err)
-		dialog.ShowError(errors.New("Unable to read file"), m.parentWindow)
-		return
-	}
-
-	jsonBytes = jsonBytes[:n]
-	err = json.Unmarshal(jsonBytes, m)
-	if err != nil {
-		loggo.Error(err)
-		dialog.ShowError(errors.New("Unable to parse file"), m.parentWindow)
-		return
+		return err
 	}
 
 	m.updateButtonsFromMap()
+	return nil
 }
 
 func (m *MapEditor) saveMap() {
@@ -170,6 +176,8 @@ func (m *MapEditor) saveMapToFile(file fyne.URIWriteCloser, err error) {
 		loggo.Error(err)
 		dialog.ShowError(errors.New("Unable to write to file"), m.parentWindow)
 	}
+
+	m.mapFile = file.URI().Path()
 }
 
 func (m *MapEditor) remapBtnFor(c wiimote.Keycode) *widget.Button {
@@ -214,3 +222,5 @@ func (m *MapEditor) StickConfigFor(stick wiimote.Stick) StickConfig {
 	}
 	return cfg
 }
+
+func (m *MapEditor) MapFile() string { return m.mapFile }
